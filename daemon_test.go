@@ -43,8 +43,8 @@ outer:
 }
 
 func TestDaemonHappyPath(t *testing.T) {
-	config := Config{
-		Interfaces: []InterfaceConfig{
+	config := &Config{
+		Interfaces: []*InterfaceConfig{
 			{
 				Name:                   "net0",
 				RAIntervalMilliseconds: 100,
@@ -92,10 +92,10 @@ func TestDaemonHappyPath(t *testing.T) {
 		config.Interfaces[1].RAIntervalMilliseconds = 200
 
 		// Reload
-		timeout, cancel := context.WithTimeout(context.Background(), time.Second*1)
+		timeout, cancelTimeout := context.WithTimeout(context.Background(), time.Second*1)
 		err := d.Reload(timeout, config)
 		require.NoError(t, err)
-		cancel()
+		cancelTimeout()
 
 		eventully(t, func() bool {
 			sock0, err := reg.getSock("net0")
@@ -116,10 +116,10 @@ func TestDaemonHappyPath(t *testing.T) {
 		config.Interfaces = config.Interfaces[:1]
 
 		// Reload
-		timeout, cancel := context.WithTimeout(context.Background(), time.Second*1)
+		timeout, cancelTimeout := context.WithTimeout(context.Background(), time.Second*1)
 		err := d.Reload(timeout, config)
 		require.NoError(t, err)
-		cancel()
+		cancelTimeout()
 
 		eventully(t, func() bool {
 			sock0, err := reg.getSock("net0")

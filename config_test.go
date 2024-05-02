@@ -42,7 +42,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "Valid Config",
 			config: &Config{
-				Interfaces: []InterfaceConfig{
+				Interfaces: []*InterfaceConfig{
 					{
 						Name:                   "net0",
 						RAIntervalMilliseconds: 1000,
@@ -58,7 +58,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "Duplicated Interface Name",
 			config: &Config{
-				Interfaces: []InterfaceConfig{
+				Interfaces: []*InterfaceConfig{
 					{
 						Name:                   "net0",
 						RAIntervalMilliseconds: 1000,
@@ -74,7 +74,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "RAIntervalMilliseconds < 70",
 			config: &Config{
-				Interfaces: []InterfaceConfig{
+				Interfaces: []*InterfaceConfig{
 					{
 						Name:                   "net0",
 						RAIntervalMilliseconds: 69,
@@ -86,7 +86,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "RAIntervalMilliseconds > 1800000",
 			config: &Config{
-				Interfaces: []InterfaceConfig{
+				Interfaces: []*InterfaceConfig{
 					{
 						Name:                   "net0",
 						RAIntervalMilliseconds: 1800001,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/netip"
+	"reflect"
 	"sync"
 	"time"
 
@@ -17,26 +18,26 @@ import (
 type raSender struct {
 	logger *slog.Logger
 
-	initialConfig InterfaceConfig
-	reloadCh      chan InterfaceConfig
+	initialConfig *InterfaceConfig
+	reloadCh      chan *InterfaceConfig
 	stopCh        any
 	sock          rAdvSocket
 
 	childWg       *sync.WaitGroup
-	childReloadCh []chan InterfaceConfig
+	childReloadCh []chan *InterfaceConfig
 	childStopCh   []chan any
 
 	socketCtor rAdvSocketCtor
 }
 
-func newRASender(initialConfig InterfaceConfig, ctor rAdvSocketCtor, logger *slog.Logger) *raSender {
+func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *slog.Logger) *raSender {
 	return &raSender{
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
 		initialConfig: initialConfig,
-		reloadCh:      make(chan InterfaceConfig),
-		stopCh:        make(chan InterfaceConfig),
+		reloadCh:      make(chan *InterfaceConfig),
+		stopCh:        make(chan any),
 		childWg:       &sync.WaitGroup{},
-		childReloadCh: []chan InterfaceConfig{},
+		childReloadCh: []chan *InterfaceConfig{},
 		childStopCh:   []chan any{},
 		socketCtor:    ctor,
 	}
@@ -68,7 +69,7 @@ func (s *raSender) run(ctx context.Context) {
 	s.sock.close()
 }
 
-func (s *raSender) reload(ctx context.Context, newConfig InterfaceConfig) error {
+func (s *raSender) reload(ctx context.Context, newConfig *InterfaceConfig) error {
 	for _, ch := range s.childReloadCh {
 		select {
 		case ch <- newConfig:
@@ -85,16 +86,16 @@ func (s *raSender) stop() {
 	}
 }
 
-func (s *raSender) spawnChild(ctx context.Context, f func(context.Context, chan InterfaceConfig, chan any)) {
+func (s *raSender) spawnChild(ctx context.Context, f func(context.Context, chan *InterfaceConfig, chan any)) {
 	s.childWg.Add(1)
-	reloadCh := make(chan InterfaceConfig)
+	reloadCh := make(chan *InterfaceConfig)
 	stopCh := make(chan any)
 	s.childReloadCh = append(s.childReloadCh, reloadCh)
 	s.childStopCh = append(s.childStopCh, stopCh)
 	go f(ctx, reloadCh, stopCh)
 }
 
-func (s *raSender) runUnsolicitedRASender(ctx context.Context, reloadCh chan InterfaceConfig, stopCh chan any) {
+func (s *raSender) runUnsolicitedRASender(ctx context.Context, reloadCh chan *InterfaceConfig, stopCh chan any) {
 	defer s.childWg.Done()
 
 	// The current desired configuration
@@ -116,8 +117,7 @@ reload:
 					continue
 				}
 			case newConfig := <-reloadCh:
-				if config == newConfig {
-					// No change. Ignore.
+				if reflect.DeepEqual(config, newConfig) {
 					s.logger.Info("No configuration change. Skip reloading.")
 					continue
 				}

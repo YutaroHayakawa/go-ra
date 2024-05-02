@@ -8,15 +8,19 @@ import (
 
 // Daemon is the main struct for the radv daemon
 type Daemon struct {
-	initialConfig     Config
-	reloadCh          chan Config
+	initialConfig     *Config
+	reloadCh          chan *Config
 	stopCh            any
 	logger            *slog.Logger
 	socketConstructor rAdvSocketCtor
 }
 
 // New creates a new Daemon instance with the provided configuration and options
-func New(c Config, opts ...DaemonOption) (*Daemon, error) {
+func New(config *Config, opts ...DaemonOption) (*Daemon, error) {
+	// Take a copy of the new configuration. c.validate() will modify it to
+	// set default values.
+	c := config.DeepCopy()
+
 	// Validate the configuration first
 	if err := c.validate(); err != nil {
 		return nil, err
@@ -24,7 +28,7 @@ func New(c Config, opts ...DaemonOption) (*Daemon, error) {
 
 	d := &Daemon{
 		initialConfig:     c,
-		reloadCh:          make(chan Config),
+		reloadCh:          make(chan *Config),
 		logger:            slog.Default(),
 		socketConstructor: newRAdvSocket,
 	}
@@ -50,13 +54,13 @@ func (d *Daemon) Run(ctx context.Context) error {
 	// Main loop
 	for {
 		var (
-			toAdd    []InterfaceConfig
+			toAdd    []*InterfaceConfig
 			toUpdate []*raSender
 			toRemove []*raSender
 		)
 
 		// Cache the interface => config mapping for later use
-		ifaceConfigs := map[string]InterfaceConfig{}
+		ifaceConfigs := map[string]*InterfaceConfig{}
 
 		// Find out which raSender to add, update and remove
 		for _, c := range config.Interfaces {
@@ -86,9 +90,9 @@ func (d *Daemon) Run(ctx context.Context) error {
 			iface := raSender.initialConfig.Name
 			d.logger.Info("Updating RA sender", slog.String("interface", iface))
 			// Set timeout to guarantee progress
-			timeout, cancel := context.WithTimeout(ctx, time.Second*3)
+			timeout, cancelTimeout := context.WithTimeout(ctx, time.Second*3)
 			raSender.reload(timeout, ifaceConfigs[iface])
-			cancel()
+			cancelTimeout()
 		}
 
 		// Remove unnecessary workers
@@ -117,12 +121,21 @@ func (d *Daemon) Run(ctx context.Context) error {
 // the reload process. Currently, the result of the unsucecssful or cancelled
 // reload is undefined and the daemon may be running with either the old or the
 // new configuration or both.
-func (d *Daemon) Reload(ctx context.Context, newConfig Config) error {
+func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
+	// Take a copy of the new configuration. c.validate() will modify it to
+	// set default values.
+	c := newConfig.DeepCopy()
+
+	if err := c.validate(); err != nil {
+		return err
+	}
+
 	select {
-	case d.reloadCh <- newConfig:
+	case d.reloadCh <- c:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+
 	return nil
 }
 

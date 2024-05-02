@@ -29,7 +29,7 @@ func main() {
 
 	slog.Info("Starting radv daemon", slog.Any("config", *config))
 
-	daemon, err := radv.New(*config)
+	daemon, err := radv.New(config)
 	if err != nil {
 		slog.Error("Failed to create daemon. Aborting.", "error", err.Error())
 		return
@@ -52,7 +52,7 @@ func main() {
 					slog.Error("Failed to parse config file. Skip reloading.", "error", err.Error())
 					continue
 				}
-				if err := daemon.Reload(ctx, *config); err != nil {
+				if err := daemon.Reload(ctx, config); err != nil {
 					slog.Error("Failed to reload configuration", "error", err.Error())
 					continue
 				}

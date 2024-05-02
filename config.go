@@ -39,7 +39,7 @@ func (e *ParameterError) Error() string {
 // Config represents the configuration of the daemon
 type Config struct {
 	// Interface-specific configuration parameters
-	Interfaces []InterfaceConfig `yaml:"interfaces"`
+	Interfaces []*InterfaceConfig `yaml:"interfaces"`
 }
 
 func (c *Config) validate() error {
