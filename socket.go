@@ -26,7 +26,8 @@ type rAdvSocketCtor func(string) (rAdvSocket, error)
 
 // A real socket
 type sock struct {
-	conn *ndp.Conn
+	conn  *ndp.Conn
+	iface *net.Interface
 }
 
 var _ rAdvSocket = &sock{}
@@ -40,13 +41,20 @@ func newRAdvSocket(ifaceName string) (rAdvSocket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &sock{conn: conn}, nil
+	return &sock{conn: conn, iface: iface}, nil
 }
 
 func (s *sock) sendRA(ctx context.Context, addr netip.Addr, msg *ndp.RouterAdvertisement) error {
 	var err error
 
 	ch := make(chan any)
+
+	// Add source link-layer address option here. It's a bit awkward, but
+	// makes tests easier since the fake socket doesn't need real device.
+	msg.Options = append(msg.Options, &ndp.LinkLayerAddress{
+		Direction: ndp.Source,
+		Addr:      s.iface.HardwareAddr,
+	})
 
 	go func() {
 		defer close(ch)
