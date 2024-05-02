@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	RAIntervalMillisecondsDefault = uint(600000) // 600 seconds
+	RAIntervalMillisecondsDefault = 600000 // 600 seconds
 
 	ErrDuplicateInterfaceName = errors.New("duplicate interface name")
 )
@@ -39,7 +39,7 @@ func (e *ParameterError) Error() string {
 // Config represents the configuration of the daemon
 type Config struct {
 	// Interface-specific configuration parameters
-	Interfaces []InterfaceConfig `json:"interfaces"`
+	Interfaces []InterfaceConfig `yaml:"interfaces"`
 }
 
 func (c *Config) validate() error {
@@ -67,9 +67,9 @@ func (c *Config) validate() error {
 // InterfaceConfig represents the interface-specific configuration parameters
 type InterfaceConfig struct {
 	// Interface name. Must be unique within the configuration.
-	Name string `json:"name"`
+	Name string `yaml:"name"`
 	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000.
-	RAIntervalMilliseconds uint32 `json:"raIntervalMilliseconds"`
+	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds"`
 }
 
 // applyDefaults applies the default values to the missing parameters
@@ -78,7 +78,7 @@ func (p *InterfaceConfig) applyDefaults() {
 		return
 	}
 	if p.RAIntervalMilliseconds == 0 {
-		p.RAIntervalMilliseconds = uint32(RAIntervalMillisecondsDefault)
+		p.RAIntervalMilliseconds = RAIntervalMillisecondsDefault
 	}
 }
 

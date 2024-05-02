@@ -25,6 +25,11 @@ interfaces:
 		c, err := ParseConfigFile(f.Name())
 		require.NoError(t, err)
 		require.NotNil(t, c)
+		require.Len(t, c.Interfaces, 2)
+		require.Equal(t, "net0", c.Interfaces[0].Name)
+		require.Equal(t, 1000, c.Interfaces[0].RAIntervalMilliseconds)
+		require.Equal(t, "net1", c.Interfaces[1].Name)
+		require.Equal(t, 1000, c.Interfaces[1].RAIntervalMilliseconds)
 	})
 }
 
