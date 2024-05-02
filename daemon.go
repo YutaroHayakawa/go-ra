@@ -39,6 +39,8 @@ func New(c Config, opts ...DaemonOption) (*Daemon, error) {
 }
 
 func (d *Daemon) Run(ctx context.Context) error {
+	d.logger.Info("Starting daemon")
+
 	// Current desired configuration
 	config := d.initialConfig
 
@@ -104,6 +106,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 			config = newConfig
 			continue
 		case <-ctx.Done():
+			d.logger.Info("Shutting down daemon")
 			return ctx.Err()
 		}
 	}
