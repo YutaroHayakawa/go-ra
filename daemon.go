@@ -23,9 +23,10 @@ func New(c Config, opts ...DaemonOption) (*Daemon, error) {
 	}
 
 	d := &Daemon{
-		initialConfig: c,
-		reloadCh:      make(chan Config),
-		logger:        slog.Default(),
+		initialConfig:     c,
+		reloadCh:          make(chan Config),
+		logger:            slog.Default(),
+		socketConstructor: newRAdvSocket,
 	}
 
 	for _, opt := range opts {
