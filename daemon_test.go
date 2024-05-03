@@ -58,7 +58,7 @@ func TestDaemonHappyPath(t *testing.T) {
 
 	reg := newFakeSockRegistry()
 
-	d, err := New(config, withSocketConstructor(reg.newSock))
+	d, err := NewDaemon(config, withSocketConstructor(reg.newSock))
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

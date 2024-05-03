@@ -15,8 +15,8 @@ type Daemon struct {
 	socketConstructor rAdvSocketCtor
 }
 
-// New creates a new Daemon instance with the provided configuration and options
-func New(config *Config, opts ...DaemonOption) (*Daemon, error) {
+// NewDaemon creates a new Daemon instance with the provided configuration and options
+func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	// Take a copy of the new configuration. c.validate() will modify it to
 	// set default values.
 	c := config.DeepCopy()

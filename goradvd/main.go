@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	daemon, err := radv.New(config)
+	daemon, err := radv.NewDaemon(config)
 	if err != nil {
 		slog.Error("Failed to create daemon. Aborting.", "error", err.Error())
 		return
