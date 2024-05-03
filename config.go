@@ -2,7 +2,6 @@ package radv
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/creasty/defaults"
@@ -92,12 +91,12 @@ func ParseConfigFile(path string) (*Config, error) {
 
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("cannot open config file: %w", err)
+		return nil, err
 	}
 	defer f.Close()
 
 	if err := yaml.NewDecoder(f).Decode(&c); err != nil {
-		return nil, fmt.Errorf("cannot parse config file: %w", err)
+		return nil, err
 	}
 
 	return &c, nil

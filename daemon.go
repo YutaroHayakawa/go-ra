@@ -34,15 +34,14 @@ func New(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	}
 
 	for _, opt := range opts {
-		if err := opt(d); err != nil {
-			return nil, err
-		}
+		opt(d)
 	}
 
 	return d, nil
 }
 
-func (d *Daemon) Run(ctx context.Context) error {
+// Run starts the daemon and blocks until the context is cancelled
+func (d *Daemon) Run(ctx context.Context) {
 	d.logger.Info("Starting daemon")
 
 	// Current desired configuration
@@ -111,7 +110,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 			continue
 		case <-ctx.Done():
 			d.logger.Info("Shutting down daemon")
-			return ctx.Err()
+			return
 		}
 	}
 }
@@ -140,21 +139,19 @@ func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 }
 
 // DaemonOption is an optional parameter for the Daemon constructor
-type DaemonOption func(*Daemon) error
+type DaemonOption func(*Daemon)
 
 // WithLogger overrides the default logger with the provided one.
 func WithLogger(l *slog.Logger) DaemonOption {
-	return func(d *Daemon) error {
+	return func(d *Daemon) {
 		d.logger = l
-		return nil
 	}
 }
 
 // withSocketConstructor overrides the default socket constructor with the
 // provided one. For testing purposes only.
 func withSocketConstructor(c rAdvSocketCtor) DaemonOption {
-	return func(d *Daemon) error {
+	return func(d *Daemon) {
 		d.socketConstructor = c
-		return nil
 	}
 }
