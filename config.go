@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/creasty/defaults"
+	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,67 +40,76 @@ func (e *ParameterError) Error() string {
 
 // Config represents the configuration of the daemon
 type Config struct {
-	// Interface-specific configuration parameters
-	Interfaces []*InterfaceConfig `yaml:"interfaces"`
-}
-
-func (c *Config) validate() error {
-	if c == nil {
-		// No configuration is a valid configuration
-		return nil
-	}
-
-	ifaces := map[string]struct{}{}
-	for _, p := range c.Interfaces {
-		if _, ok := ifaces[p.Name]; ok {
-			return ErrDuplicateInterfaceName
-		}
-
-		if err := p.validate(); err != nil {
-			return fmt.Errorf("interface %s has an invalid parameter: %w", p.Name, err)
-		}
-
-		ifaces[p.Name] = struct{}{}
-	}
-
-	return nil
+	// Interface-specific configuration parameters. The Name field must be
+	// unique within the slice. The slice itself and elements must not be
+	// nil.
+	Interfaces []*InterfaceConfig `yaml:"interfaces" validate:"required,non_nil_and_unique_name,dive,required"`
 }
 
 // InterfaceConfig represents the interface-specific configuration parameters
 type InterfaceConfig struct {
-	// Interface name. Must be unique within the configuration.
-	Name string `yaml:"name"`
-	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000.
-	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds"`
+	// Required: Network interface name. Must be unique within the configuration.
+	Name string `yaml:"name" validate:"required"`
+	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000. Default is 600000.
+	// The upper bound is chosen to be compliant with RFC4861. The lower bound is intentionally
+	// chosen to be lower than RFC4861 for faster convergence. If you don't wish to overwhelm the
+	// network, and wish to be compliant with RFC4861, set to higher than 3000 as RFC4861 suggests.
+	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
 }
 
-// applyDefaults applies the default values to the missing parameters
-func (p *InterfaceConfig) applyDefaults() {
-	if p == nil {
-		return
-	}
-	if p.RAIntervalMilliseconds == 0 {
-		p.RAIntervalMilliseconds = RAIntervalMillisecondsDefault
-	}
-}
+type ValidationErrors = validator.ValidationErrors
 
-func (p *InterfaceConfig) validate() error {
-	if p == nil {
-		return fmt.Errorf("nil parameter")
+func (c *Config) defaultAndValidate() error {
+	if err := defaults.Set(c); err != nil {
+		panic("BUG (Please report 🙏): Defaulting failed: " + err.Error())
 	}
 
-	// Fill missing parameters before validation
-	p.applyDefaults()
+	validate := validator.New(validator.WithRequiredStructEnabled())
 
-	if p.Name == "" {
-		return &ParameterError{"Name", "must be a valid interface name"}
-	}
+	// Adhoc custom validator which validates the slice elements are not
+	// nil AND the Name field is unique. As far as I know, there is no way
+	// to validate the uniqueness of struct fields in the nil-able slice of
+	// struct pointerrs with validator's built-in constraints.
+	validate.RegisterValidation("non_nil_and_unique_name", func(fl validator.FieldLevel) bool {
+		names := make(map[string]struct{})
 
-	// The lower bound violates RFC 4861, but like FRRouting does, we allow
-	// it for the fast convergence in the BGP Unnumbered use case. The
-	// upper bound comes from RFC 4861.
-	if p.RAIntervalMilliseconds < 70 || p.RAIntervalMilliseconds > 1800000 {
-		return &ParameterError{"RAIntervalMilliseconds", "must be >= 70 and <= 1800000"}
+		ifaceSlice := fl.Field()
+		for i := 0; i < fl.Field().Len(); i++ {
+			ifacep := ifaceSlice.Index(i)
+			if ifacep.IsNil() {
+				return false
+			}
+
+			if ifacep.IsNil() {
+				return false
+			}
+
+			iface := ifacep.Elem()
+
+			name := iface.FieldByName("Name")
+			if _, ok := names[name.String()]; ok {
+				return false
+			} else {
+				names[name.String()] = struct{}{}
+			}
+		}
+
+		return true
+	})
+
+	if err := validate.Struct(c); err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			panic("BUG (Please report 🙏): Invalid validation: " + err.Error())
+		}
+
+		var verrs ValidationErrors
+		if errors.As(err, &verrs) {
+			return verrs
+		}
+
+		// This is impossible, according to the validator's documentation
+		// https://pkg.go.dev/github.com/go-playground/validator/v10#hdr-Validation_Functions_Return_Type_error
+		return err
 	}
 
 	return nil

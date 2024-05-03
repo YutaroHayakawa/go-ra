@@ -22,7 +22,7 @@ func New(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	c := config.DeepCopy()
 
 	// Validate the configuration first
-	if err := c.validate(); err != nil {
+	if err := c.defaultAndValidate(); err != nil {
 		return nil, err
 	}
 
@@ -126,7 +126,7 @@ func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 	// set default values.
 	c := newConfig.DeepCopy()
 
-	if err := c.validate(); err != nil {
+	if err := c.defaultAndValidate(); err != nil {
 		return err
 	}
 

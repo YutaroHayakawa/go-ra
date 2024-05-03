@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,9 +36,11 @@ interfaces:
 
 func TestConfigValidation(t *testing.T) {
 	tests := []struct {
-		name          string
-		config        *Config
-		expectedError error
+		name        string
+		config      *Config
+		expectError bool
+		errorField  string
+		errorTag    string
 	}{
 		{
 			name: "Valid Config",
@@ -53,7 +56,32 @@ func TestConfigValidation(t *testing.T) {
 					},
 				},
 			},
-			expectedError: nil,
+			expectError: false,
+		},
+		{
+			name: "Nil InterfaceConig",
+			config: &Config{
+				Interfaces: nil,
+			},
+			expectError: true,
+			errorField:  "Interfaces",
+			errorTag:    "required",
+		},
+		{
+			name: "Empty InterfaceConig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil InterfaceConig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{nil},
+			},
+			expectError: true,
+			errorField:  "Interfaces",
+			errorTag:    "non_nil_and_unique_name",
 		},
 		{
 			name: "Duplicated Interface Name",
@@ -69,7 +97,9 @@ func TestConfigValidation(t *testing.T) {
 					},
 				},
 			},
-			expectedError: ErrDuplicateInterfaceName,
+			expectError: true,
+			errorField:  "Interfaces",
+			errorTag:    "non_nil_and_unique_name",
 		},
 		{
 			name: "RAIntervalMilliseconds < 70",
@@ -81,7 +111,9 @@ func TestConfigValidation(t *testing.T) {
 					},
 				},
 			},
-			expectedError: &ParameterError{"RAIntervalMilliseconds", "must be >= 70 and <= 1800000"},
+			expectError: true,
+			errorField:  "RAIntervalMilliseconds",
+			errorTag:    "gte",
 		},
 		{
 			name: "RAIntervalMilliseconds > 1800000",
@@ -93,18 +125,24 @@ func TestConfigValidation(t *testing.T) {
 					},
 				},
 			},
-			expectedError: &ParameterError{"RAIntervalMilliseconds", "must be >= 70 and <= 1800000"},
+			expectError: true,
+			errorField:  "RAIntervalMilliseconds",
+			errorTag:    "lte",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.validate()
-			if tt.expectedError == nil {
+			err := tt.config.defaultAndValidate()
+			if !tt.expectError {
 				require.NoError(t, err)
 				return
 			}
-			require.ErrorIs(t, err, tt.expectedError)
+			var verr validator.ValidationErrors
+			require.ErrorAs(t, err, &verr)
+			require.Len(t, verr, 1)
+			require.Equal(t, tt.errorField, verr[0].Field())
+			require.Equal(t, tt.errorTag, verr[0].Tag())
 		})
 	}
 }
