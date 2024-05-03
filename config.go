@@ -1,7 +1,9 @@
 package radv
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"os"
 
 	"github.com/creasty/defaults"
@@ -14,18 +16,18 @@ type Config struct {
 	// Interface-specific configuration parameters. The Name field must be
 	// unique within the slice. The slice itself and elements must not be
 	// nil.
-	Interfaces []*InterfaceConfig `yaml:"interfaces" validate:"required,non_nil_and_unique_name,dive,required"`
+	Interfaces []*InterfaceConfig `yaml:"interfaces" json:"interfaces" validate:"required,non_nil_and_unique_name,dive,required"`
 }
 
 // InterfaceConfig represents the interface-specific configuration parameters
 type InterfaceConfig struct {
 	// Required: Network interface name. Must be unique within the configuration.
-	Name string `yaml:"name" validate:"required"`
+	Name string `yaml:"name" json:"name" validate:"required"`
 	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000. Default is 600000.
 	// The upper bound is chosen to be compliant with RFC4861. The lower bound is intentionally
 	// chosen to be lower than RFC4861 for faster convergence. If you don't wish to overwhelm the
 	// network, and wish to be compliant with RFC4861, set to higher than 3000 as RFC4861 suggests.
-	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
+	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" json:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
 }
 
 type ValidationErrors = validator.ValidationErrors
@@ -86,18 +88,31 @@ func (c *Config) defaultAndValidate() error {
 	return nil
 }
 
-func ParseConfigFile(path string) (*Config, error) {
+func ParseConfigJSON(r io.Reader) (*Config, error) {
 	var c Config
 
+	if err := json.NewDecoder(r).Decode(&c); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func ParseConfigYAML(r io.Reader) (*Config, error) {
+	var c Config
+
+	if err := yaml.NewDecoder(r).Decode(&c); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func ParseConfigFile(path string) (*Config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-
-	if err := yaml.NewDecoder(f).Decode(&c); err != nil {
-		return nil, err
-	}
-
-	return &c, nil
+	return ParseConfigYAML(f)
 }
