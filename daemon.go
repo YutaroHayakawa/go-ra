@@ -11,6 +11,7 @@ type Daemon struct {
 	initialConfig     *Config
 	reloadCh          chan *Config
 	stopCh            any
+	statusCh          chan chan *Status
 	logger            *slog.Logger
 	socketConstructor rAdvSocketCtor
 }
@@ -29,6 +30,7 @@ func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	d := &Daemon{
 		initialConfig:     c,
 		reloadCh:          make(chan *Config),
+		statusCh:          make(chan chan *Status),
 		logger:            slog.Default(),
 		socketConstructor: newRAdvSocket,
 	}
@@ -50,6 +52,7 @@ func (d *Daemon) Run(ctx context.Context) {
 	// Interface to raSender mapping
 	raSenders := map[string]*raSender{}
 
+reload:
 	// Main loop
 	for {
 		var (
@@ -103,16 +106,29 @@ func (d *Daemon) Run(ctx context.Context) {
 		}
 
 		// Wait for the events
-		select {
-		case newConfig := <-d.reloadCh:
-			d.logger.Info("Reloading configuration")
-			config = newConfig
-			continue
-		case <-ctx.Done():
-			d.logger.Info("Shutting down daemon")
-			return
+		for {
+			select {
+			case newConfig := <-d.reloadCh:
+				d.logger.Info("Reloading configuration")
+				config = newConfig
+				continue reload
+			case <-ctx.Done():
+				d.logger.Info("Shutting down daemon")
+				return
+			case resCh := <-d.statusCh:
+				ifaceStatus := d.raSenderStatus(ctx, raSenders)
+				resCh <- &Status{Interfaces: ifaceStatus}
+			}
 		}
 	}
+}
+
+func (d *Daemon) raSenderStatus(ctx context.Context, raSenders map[string]*raSender) []*InterfaceStatus {
+	ifaceStatus := []*InterfaceStatus{}
+	for _, raSender := range raSenders {
+		ifaceStatus = append(ifaceStatus, raSender.status())
+	}
+	return ifaceStatus
 }
 
 // Reload reloads the configuration of the daemon. The context passed to this
@@ -136,6 +152,13 @@ func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 	}
 
 	return nil
+}
+
+// Status returns the current status of the daemon
+func (d *Daemon) Status() *Status {
+	resCh := make(chan *Status)
+	d.statusCh <- resCh
+	return <-resCh
 }
 
 // DaemonOption is an optional parameter for the Daemon constructor

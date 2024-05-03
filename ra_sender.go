@@ -19,6 +19,7 @@ type raSender struct {
 
 	initialConfig *InterfaceConfig
 	reloadCh      chan *InterfaceConfig
+	statusCh      chan chan *InterfaceStatus
 	stopCh        chan any
 	sock          rAdvSocket
 	socketCtor    rAdvSocketCtor
@@ -29,6 +30,7 @@ func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *sl
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
 		initialConfig: initialConfig,
 		reloadCh:      make(chan *InterfaceConfig),
+		statusCh:      make(chan chan *InterfaceStatus),
 		stopCh:        make(chan any),
 		socketCtor:    ctor,
 	}
@@ -37,6 +39,11 @@ func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *sl
 func (s *raSender) run(ctx context.Context) {
 	// The current desired configuration
 	config := s.initialConfig
+
+	// The current status of the interface
+	status := &InterfaceStatus{
+		Name: config.Name,
+	}
 
 	// Create the socket
 	err := retry.Constant(ctx, time.Second, func(ctx context.Context) error {
@@ -49,14 +56,19 @@ func (s *raSender) run(ctx context.Context) {
 				return fmt.Errorf("cannot create socket: %w", err)
 			}
 
+			status.failing(err)
+
 			return retry.RetryableError(err)
 		}
 
 		return nil
 	})
 	if err != nil {
+		status.stopped(err)
 		return
 	}
+
+	status.running()
 
 reload:
 	for {
@@ -73,27 +85,38 @@ reload:
 			case <-ticker.C:
 				err := s.sock.sendRA(ctx, netip.IPv6LinkLocalAllNodes(), msg)
 				if err != nil {
+					status.failing(err)
 					continue
 				}
+				status.running()
 			case newConfig := <-s.reloadCh:
 				if reflect.DeepEqual(config, newConfig) {
 					s.logger.Info("No configuration change. Skip reloading.")
 					continue
 				}
 				config = newConfig
-				s.logger.Info("Configuration changed. Reloading.")
+				status.reloading()
 				continue reload
+			case resCh := <-s.statusCh:
+				resCh <- status.DeepCopy()
+				continue
 			case <-ctx.Done():
-				s.logger.Info("Context is done. Stopping.")
+				status.stopped(ctx.Err())
 				break reload
 			case <-s.stopCh:
-				s.logger.Info("Stop event received. Stopping.")
+				status.stopped(nil)
 				break reload
 			}
 		}
 	}
 
 	s.sock.close()
+}
+
+func (s *raSender) status() *InterfaceStatus {
+	resCh := make(chan *InterfaceStatus)
+	s.statusCh <- resCh
+	return <-resCh
 }
 
 func (s *raSender) reload(ctx context.Context, newConfig *InterfaceConfig) error {
