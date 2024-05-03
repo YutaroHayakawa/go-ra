@@ -10,34 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	RAIntervalMillisecondsDefault = 600000 // 600 seconds
-
-	ErrDuplicateInterfaceName = errors.New("duplicate interface name")
-)
-
-// ParameterError represents an error in a configuration parameter
-type ParameterError struct {
-	// The name of the problematic parameter
-	Parameter string
-	// The error message
-	Message string
-}
-
-var _ error = (*ParameterError)(nil)
-
-func (a *ParameterError) Is(b error) bool {
-	var e *ParameterError
-	if !errors.As(b, &e) {
-		return false
-	}
-	return a.Parameter == e.Parameter && a.Message == e.Message
-}
-
-func (e *ParameterError) Error() string {
-	return fmt.Sprintf("%s: %s", e.Parameter, e.Message)
-}
-
 // Config represents the configuration of the daemon
 type Config struct {
 	// Interface-specific configuration parameters. The Name field must be
