@@ -3,6 +3,7 @@ package radv
 import (
 	"context"
 	"log/slog"
+	"sort"
 	"time"
 )
 
@@ -128,6 +129,9 @@ func (d *Daemon) raSenderStatus(ctx context.Context, raSenders map[string]*raSen
 	for _, raSender := range raSenders {
 		ifaceStatus = append(ifaceStatus, raSender.status())
 	}
+	sort.Slice(ifaceStatus, func(i, j int) bool {
+		return ifaceStatus[i].Name < ifaceStatus[j].Name
+	})
 	return ifaceStatus
 }
 

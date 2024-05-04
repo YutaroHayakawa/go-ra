@@ -87,6 +87,15 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.True(t, assertRAInterval(t, sock, time.Millisecond*100))
 	})
 
+	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {
+		status := d.Status()
+		require.Len(t, status.Interfaces, 2)
+		assert.Equal(t, "net0", status.Interfaces[0].Name)
+		assert.Equal(t, "net1", status.Interfaces[1].Name)
+		assert.Equal(t, Running, status.Interfaces[0].State)
+		assert.Equal(t, Running, status.Interfaces[1].State)
+	})
+
 	t.Run("Ensure unsolicited RA interval is updated after reload", func(t *testing.T) {
 		// Update the interval of net1. net0 should remain the same.
 		config.Interfaces[1].RAIntervalMilliseconds = 200
