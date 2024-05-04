@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"github.com/YutaroHayakawa/go-radv"
 	"github.com/YutaroHayakawa/go-radv/cmd/internal"
@@ -118,9 +119,11 @@ func status(output string) {
 	switch output {
 	case "table":
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
-		fmt.Fprintln(w, "Name\tState\tMessage")
+		fmt.Fprintln(w, "Name\tAge\tTxUnsolicited\tState\tMessage")
 		for _, iface := range status.Interfaces {
-			fmt.Fprintf(w, "%s\t%s\t%s", iface.Name, iface.State, iface.Message)
+			age := time.Duration(time.Now().Unix()-iface.LastUpdate) * time.Second
+			age = age.Round(time.Second)
+			fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", iface.Name, age.String(), iface.TxUnsolicitedRA, iface.State, iface.Message)
 		}
 		w.Flush()
 

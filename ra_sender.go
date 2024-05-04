@@ -83,9 +83,30 @@ func (s *raSender) reportStopped(err error) {
 	}
 }
 
+func (s *raSender) incTxStat() {
+	s.statusLock.Lock()
+	defer s.statusLock.Unlock()
+	s.status.TxUnsolicitedRA++
+}
+
+func (s *raSender) setLastUpdate() {
+	s.statusLock.Lock()
+	defer s.statusLock.Unlock()
+	s.status.LastUpdate = time.Now().Unix()
+}
+
+func (s *raSender) resetStat() {
+	s.statusLock.Lock()
+	defer s.statusLock.Unlock()
+	s.status.TxUnsolicitedRA = 0
+}
+
 func (s *raSender) run(ctx context.Context) {
 	// The current desired configuration
 	config := s.initialConfig
+
+	// Set a timestamp for the first "update"
+	s.setLastUpdate()
 
 	// Create the socket
 	err := retry.Constant(ctx, time.Second, func(ctx context.Context) error {
@@ -134,6 +155,7 @@ reload:
 					s.reportFailing(err)
 					continue
 				}
+				s.incTxStat()
 				s.reportRunning()
 			case newConfig := <-s.reloadCh:
 				if reflect.DeepEqual(config, newConfig) {
@@ -142,6 +164,7 @@ reload:
 				}
 				config = newConfig
 				s.reportReloading()
+				s.setLastUpdate()
 				continue reload
 			case <-ctx.Done():
 				s.reportStopped(ctx.Err())
@@ -151,6 +174,7 @@ reload:
 				break reload
 			}
 		}
+
 	}
 
 	s.sock.close()
