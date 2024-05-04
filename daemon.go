@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -12,9 +13,11 @@ type Daemon struct {
 	initialConfig     *Config
 	reloadCh          chan *Config
 	stopCh            any
-	statusCh          chan chan *Status
 	logger            *slog.Logger
 	socketConstructor rAdvSocketCtor
+
+	raSenders     map[string]*raSender
+	raSendersLock sync.RWMutex
 }
 
 // NewDaemon creates a new Daemon instance with the provided configuration and options
@@ -31,9 +34,9 @@ func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	d := &Daemon{
 		initialConfig:     c,
 		reloadCh:          make(chan *Config),
-		statusCh:          make(chan chan *Status),
 		logger:            slog.Default(),
 		socketConstructor: newRAdvSocket,
+		raSenders:         map[string]*raSender{},
 	}
 
 	for _, opt := range opts {
@@ -50,9 +53,6 @@ func (d *Daemon) Run(ctx context.Context) {
 	// Current desired configuration
 	config := d.initialConfig
 
-	// Interface to raSender mapping
-	raSenders := map[string]*raSender{}
-
 reload:
 	// Main loop
 	for {
@@ -62,19 +62,22 @@ reload:
 			toRemove []*raSender
 		)
 
+		// We may modify the raSenders map from now
+		d.raSendersLock.Lock()
+
 		// Cache the interface => config mapping for later use
 		ifaceConfigs := map[string]*InterfaceConfig{}
 
 		// Find out which raSender to add, update and remove
 		for _, c := range config.Interfaces {
-			if raSender, ok := raSenders[c.Name]; !ok {
+			if raSender, ok := d.raSenders[c.Name]; !ok {
 				toAdd = append(toAdd, c)
 			} else {
 				toUpdate = append(toUpdate, raSender)
 			}
 			ifaceConfigs[c.Name] = c
 		}
-		for name, raSender := range raSenders {
+		for name, raSender := range d.raSenders {
 			if _, ok := ifaceConfigs[name]; !ok {
 				toRemove = append(toRemove, raSender)
 			}
@@ -85,7 +88,7 @@ reload:
 			d.logger.Info("Adding new RA sender", slog.String("interface", c.Name))
 			sender := newRASender(c, d.socketConstructor, d.logger)
 			go sender.run(ctx)
-			raSenders[c.Name] = sender
+			d.raSenders[c.Name] = sender
 		}
 
 		// Update (reload) existing workers
@@ -103,8 +106,10 @@ reload:
 			iface := raSender.initialConfig.Name
 			d.logger.Info("Deleting RA sender", slog.String("interface", iface))
 			raSender.stop()
-			delete(raSenders, iface)
+			delete(d.raSenders, iface)
 		}
+
+		d.raSendersLock.Unlock()
 
 		// Wait for the events
 		for {
@@ -116,23 +121,9 @@ reload:
 			case <-ctx.Done():
 				d.logger.Info("Shutting down daemon")
 				return
-			case resCh := <-d.statusCh:
-				ifaceStatus := d.raSenderStatus(ctx, raSenders)
-				resCh <- &Status{Interfaces: ifaceStatus}
 			}
 		}
 	}
-}
-
-func (d *Daemon) raSenderStatus(ctx context.Context, raSenders map[string]*raSender) []*InterfaceStatus {
-	ifaceStatus := []*InterfaceStatus{}
-	for _, raSender := range raSenders {
-		ifaceStatus = append(ifaceStatus, raSender.status())
-	}
-	sort.Slice(ifaceStatus, func(i, j int) bool {
-		return ifaceStatus[i].Name < ifaceStatus[j].Name
-	})
-	return ifaceStatus
 }
 
 // Reload reloads the configuration of the daemon. The context passed to this
@@ -160,9 +151,20 @@ func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 
 // Status returns the current status of the daemon
 func (d *Daemon) Status() *Status {
-	resCh := make(chan *Status)
-	d.statusCh <- resCh
-	return <-resCh
+	d.raSendersLock.RLock()
+
+	ifaceStatus := []*InterfaceStatus{}
+	for _, raSender := range d.raSenders {
+		ifaceStatus = append(ifaceStatus, raSender.getStatus())
+	}
+
+	d.raSendersLock.RUnlock()
+
+	sort.Slice(ifaceStatus, func(i, j int) bool {
+		return ifaceStatus[i].Name < ifaceStatus[j].Name
+	})
+
+	return &Status{Interfaces: ifaceStatus}
 }
 
 // DaemonOption is an optional parameter for the Daemon constructor

@@ -89,6 +89,7 @@ func TestDaemonHappyPath(t *testing.T) {
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {
 		status := d.Status()
+		require.NoError(t, err)
 		require.Len(t, status.Interfaces, 2)
 		assert.Equal(t, "net0", status.Interfaces[0].Name)
 		assert.Equal(t, "net1", status.Interfaces[1].Name)
