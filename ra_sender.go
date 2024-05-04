@@ -31,11 +31,6 @@ type raSender struct {
 	socketCtor rAdvSocketCtor
 }
 
-type raSenderStatusReq struct {
-	ctx   context.Context
-	resCh chan *InterfaceStatus
-}
-
 func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *slog.Logger) *raSender {
 	return &raSender{
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
@@ -164,6 +159,7 @@ reload:
 				}
 				config = newConfig
 				s.reportReloading()
+				s.resetStat()
 				s.setLastUpdate()
 				continue reload
 			case <-ctx.Done():

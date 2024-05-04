@@ -52,16 +52,16 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	sysctlClient, err := sysctl.NewClient(sysctl.DefaultPath)
 	require.NoError(t, err)
 
-	sysctlClient.Set("net.ipv6.conf.go-radv0.forwarding", "1")
+	err = sysctlClient.Set("net.ipv6.conf.go-radv0.forwarding", "1")
 	require.NoError(t, err)
 
-	sysctlClient.Set("net.ipv6.conf.go-radv0.accept_ra", "2")
+	err = sysctlClient.Set("net.ipv6.conf.go-radv0.accept_ra", "2")
 	require.NoError(t, err)
 
-	sysctlClient.Set("net.ipv6.conf.go-radv1.forwarding", "1")
+	err = sysctlClient.Set("net.ipv6.conf.go-radv1.forwarding", "1")
 	require.NoError(t, err)
 
-	sysctlClient.Set("net.ipv6.conf.go-radv1.accept_ra", "2")
+	err = sysctlClient.Set("net.ipv6.conf.go-radv1.accept_ra", "2")
 	require.NoError(t, err)
 
 	t.Log("Sysctl set. Starting radvd.")

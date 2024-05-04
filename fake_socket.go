@@ -76,10 +76,6 @@ func (s *fakeSock) txCh() <-chan fakeRA {
 	return s.tx
 }
 
-func (s *fakeSock) rxCh() chan<- fakeRS {
-	return s.rx
-}
-
 func (s *fakeSock) hardwareAddr() net.HardwareAddr {
 	return net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}
 }

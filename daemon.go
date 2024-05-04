@@ -12,7 +12,6 @@ import (
 type Daemon struct {
 	initialConfig     *Config
 	reloadCh          chan *Config
-	stopCh            any
 	logger            *slog.Logger
 	socketConstructor rAdvSocketCtor
 

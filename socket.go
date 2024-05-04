@@ -11,10 +11,6 @@ import (
 	"golang.org/x/net/ipv6"
 )
 
-const (
-	maxRecvSize = 1500
-)
-
 // rAdvSocket is a raw socket for sending RA and receiving RS
 type rAdvSocket interface {
 	hardwareAddr() net.HardwareAddr
