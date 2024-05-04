@@ -3,6 +3,7 @@ package radv
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/netip"
 	"sync"
 	"sync/atomic"
@@ -77,6 +78,10 @@ func (s *fakeSock) txCh() <-chan fakeRA {
 
 func (s *fakeSock) rxCh() chan<- fakeRS {
 	return s.rx
+}
+
+func (s *fakeSock) hardwareAddr() net.HardwareAddr {
+	return net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}
 }
 
 func (s *fakeSock) sendRA(_ context.Context, addr netip.Addr, msg *ndp.RouterAdvertisement) error {

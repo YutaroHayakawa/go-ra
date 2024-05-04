@@ -17,6 +17,7 @@ const (
 
 // rAdvSocket is a raw socket for sending RA and receiving RS
 type rAdvSocket interface {
+	hardwareAddr() net.HardwareAddr
 	sendRA(ctx context.Context, dst netip.Addr, msg *ndp.RouterAdvertisement) error
 	recvRS(ctx context.Context) (*ndp.RouterSolicitation, netip.Addr, error)
 	close()
@@ -44,17 +45,14 @@ func newRAdvSocket(ifaceName string) (rAdvSocket, error) {
 	return &sock{conn: conn, iface: iface}, nil
 }
 
+func (s *sock) hardwareAddr() net.HardwareAddr {
+	return s.iface.HardwareAddr
+}
+
 func (s *sock) sendRA(ctx context.Context, addr netip.Addr, msg *ndp.RouterAdvertisement) error {
 	var err error
 
 	ch := make(chan any)
-
-	// Add source link-layer address option here. It's a bit awkward, but
-	// makes tests easier since the fake socket doesn't need real device.
-	msg.Options = append(msg.Options, &ndp.LinkLayerAddress{
-		Direction: ndp.Source,
-		Addr:      s.iface.HardwareAddr,
-	})
 
 	go func() {
 		defer close(ch)

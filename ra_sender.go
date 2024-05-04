@@ -117,6 +117,12 @@ reload:
 		msg := &ndp.RouterAdvertisement{
 			// TODO: Make this configurable
 			RouterLifetime: 1800 * time.Second,
+			Options: []ndp.Option{
+				&ndp.LinkLayerAddress{
+					Direction: ndp.Source,
+					Addr:      s.sock.hardwareAddr(),
+				},
+			},
 		}
 
 		// For unsolicited RA
