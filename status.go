@@ -32,10 +32,18 @@ func (s *InterfaceStatus) reloading() {
 
 func (s *InterfaceStatus) failing(err error) {
 	s.State = Failing
-	s.Message = err.Error()
+	if err == nil {
+		s.Message = ""
+	} else {
+		s.Message = err.Error()
+	}
 }
 
 func (s *InterfaceStatus) stopped(err error) {
 	s.State = Stopped
-	s.Message = err.Error()
+	if err == nil {
+		s.Message = ""
+	} else {
+		s.Message = err.Error()
+	}
 }
