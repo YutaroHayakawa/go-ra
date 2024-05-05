@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -35,6 +33,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	client := internal.NewClient("localhost:8888")
+
 	if os.Args[1] == "reload" {
 		var (
 			config string
@@ -42,7 +42,7 @@ func main() {
 		command := flag.NewFlagSet("reload", flag.ExitOnError)
 		command.StringVar(&config, "f", "", "config file path")
 		command.Parse(os.Args[2:])
-		reload(config)
+		reload(client, config)
 	}
 
 	if os.Args[1] == "status" {
@@ -52,11 +52,11 @@ func main() {
 		command := flag.NewFlagSet("status", flag.ExitOnError)
 		command.StringVar(&output, "o", "table", "Output format (table, json, or yaml)")
 		command.Parse(os.Args[2:])
-		status(output)
+		status(client, output)
 	}
 }
 
-func reload(config string) {
+func reload(client *internal.Client, config string) {
 	if config == "" {
 		fmt.Printf("Config file path is required. Aborting.")
 		os.Exit(1)
@@ -68,56 +68,19 @@ func reload(config string) {
 		os.Exit(1)
 	}
 
-	j, err := json.Marshal(c)
-	if err != nil {
-		fmt.Printf("Failed to marshal the configuration: %s\n", err.Error())
+	if err := client.Reload(c); err != nil {
+		fmt.Printf("Failed to reload daemon: %s\n", err.Error())
 		os.Exit(1)
-	}
-
-	res, err := http.Post("http://localhost:8888/reload", "application/json", bytes.NewBuffer(j))
-	if err != nil {
-		fmt.Printf("Failed to send the request: %s\n", err.Error())
-		os.Exit(1)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusInternalServerError {
-			fmt.Println("Internal server error")
-			os.Exit(1)
-		} else {
-			errRes := internal.RAdvdError{}
-			if err := json.NewDecoder(res.Body).Decode(&errRes); err != nil {
-				fmt.Printf("Failed to decode the response: %s\n", err.Error())
-				os.Exit(1)
-			}
-
-			fmt.Printf("Reload Failed. %s: %s\n", errRes.Error, errRes.Msg)
-			os.Exit(1)
-		}
 	}
 
 	fmt.Println("Successfully Reloaded!")
 	os.Exit(0)
 }
 
-func status(output string) {
-	res, err := http.Get("http://localhost:8888/status")
+func status(client *internal.Client, output string) {
+	status, err := client.Status()
 	if err != nil {
-		fmt.Printf("Failed to send the request: %s\n", err.Error())
-		os.Exit(1)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		fmt.Printf("Failed to get the status: %s\n", res.Status)
-		os.Exit(1)
-	}
-
-	var status radv.Status
-
-	if err := json.NewDecoder(res.Body).Decode(&status); err != nil {
-		fmt.Printf("Failed to decode the response: %s\n", err.Error())
+		fmt.Printf("Failed to get daemon status: %s\n", err.Error())
 		os.Exit(1)
 	}
 
