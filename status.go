@@ -1,4 +1,4 @@
-package radv
+package ra
 
 // Status is the status of the Daemon
 type Status struct {

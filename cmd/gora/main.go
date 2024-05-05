@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/YutaroHayakawa/go-radv"
-	"github.com/YutaroHayakawa/go-radv/cmd/internal"
+	"github.com/YutaroHayakawa/go-ra"
+	"github.com/YutaroHayakawa/go-ra/cmd/internal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,7 +62,7 @@ func reload(client *internal.Client, config string) {
 		os.Exit(1)
 	}
 
-	c, err := radv.ParseConfigYAMLFile(config)
+	c, err := ra.ParseConfigYAMLFile(config)
 	if err != nil {
 		fmt.Printf("Failed to parse the configuration file: %s\n", err.Error())
 		os.Exit(1)

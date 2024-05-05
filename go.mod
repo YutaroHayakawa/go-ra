@@ -1,4 +1,4 @@
-module github.com/YutaroHayakawa/go-radv
+module github.com/YutaroHayakawa/go-ra
 
 go 1.22.0
 

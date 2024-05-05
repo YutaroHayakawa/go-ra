@@ -6,16 +6,16 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/YutaroHayakawa/go-radv"
+	"github.com/YutaroHayakawa/go-ra"
 )
 
 type Server struct {
 	http.Server
-	daemon *radv.Daemon
+	daemon *ra.Daemon
 	logger *slog.Logger
 }
 
-func NewServer(host string, daemon *radv.Daemon, logger *slog.Logger) *Server {
+func NewServer(host string, daemon *ra.Daemon, logger *slog.Logger) *Server {
 	srv := &Server{
 		daemon: daemon,
 		logger: logger,
@@ -56,7 +56,7 @@ func (s *Server) handleReload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := radv.ParseConfigJSON(r.Body)
+	config, err := ra.ParseConfigJSON(r.Body)
 	if err != nil {
 		if errors.Is(err, &json.SyntaxError{}) {
 			s.writeError(w, http.StatusBadRequest, "JSONSyntaxError", err.Error())
@@ -69,7 +69,7 @@ func (s *Server) handleReload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.daemon.Reload(r.Context(), config); err != nil {
-		var verrs radv.ValidationErrors
+		var verrs ra.ValidationErrors
 		if errors.As(err, &verrs) {
 			s.writeError(w, http.StatusBadRequest, "ValidationError", verrs.Error())
 			return

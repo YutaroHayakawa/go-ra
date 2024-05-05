@@ -4,8 +4,8 @@ package integration_tests
 // integration tests that may run concurrently.
 var (
 	// Assigned to the TestGoBGPUnnumbered
-	vethPair0 = []string{"go-radv0", "go-radv1"}
+	vethPair0 = []string{"go-ra0", "go-ra1"}
 
 	// Assigned to the TestSolictedRA
-	vethPair1 = []string{"go-radv2", "go-radv3"}
+	vethPair1 = []string{"go-ra2", "go-ra3"}
 )

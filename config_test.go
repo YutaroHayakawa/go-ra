@@ -1,4 +1,4 @@
-package radv
+package ra
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ interfaces:
 `
 
 	t.Run("ParseConfigYAMLFile", func(t *testing.T) {
-		f, err := os.CreateTemp(".", "radv-test")
+		f, err := os.CreateTemp(".", "ra-test")
 		require.NoError(t, err)
 		defer os.Remove(f.Name())
 		_, err = f.Write([]byte(yamlConf))

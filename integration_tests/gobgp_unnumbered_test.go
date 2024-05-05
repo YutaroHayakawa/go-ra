@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YutaroHayakawa/go-radv"
+	"github.com/YutaroHayakawa/go-ra"
 	"github.com/lorenzosaino/go-sysctl"
 
 	apipb "github.com/osrg/gobgp/v3/api"
@@ -67,13 +67,13 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra", "2")
 	require.NoError(t, err)
 
-	t.Log("Sysctl set. Starting radvd.")
+	t.Log("Sysctl set. Starting rad.")
 
 	ctx := context.Background()
 
-	// Start radvd
-	radvd0, err := radv.NewDaemon(&radv.Config{
-		Interfaces: []*radv.InterfaceConfig{
+	// Start rad
+	rad0, err := ra.NewDaemon(&ra.Config{
+		Interfaces: []*ra.InterfaceConfig{
 			{
 				Name:                   veth0Name,
 				RAIntervalMilliseconds: 1000,
@@ -82,8 +82,8 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	radvd1, err := radv.NewDaemon(&radv.Config{
-		Interfaces: []*radv.InterfaceConfig{
+	rad1, err := ra.NewDaemon(&ra.Config{
+		Interfaces: []*ra.InterfaceConfig{
 			{
 				Name:                   veth1Name,
 				RAIntervalMilliseconds: 1000,
@@ -92,18 +92,18 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	go radvd0.Run(ctx)
-	go radvd1.Run(ctx)
+	go rad0.Run(ctx)
+	go rad1.Run(ctx)
 
-	t.Log("Started radvd. Waiting for RAs to be sent.")
+	t.Log("Started rad. Waiting for RAs to be sent.")
 
 	// Wait at least for 2 RAs to be sent
 	require.Eventually(t, func() bool {
-		status0 := radvd0.Status()
-		status1 := radvd1.Status()
+		status0 := rad0.Status()
+		status1 := rad1.Status()
 		return status0 != nil && status1 != nil &&
-			status0.Interfaces[0].State == radv.Running &&
-			status1.Interfaces[0].State == radv.Running
+			status0.Interfaces[0].State == ra.Running &&
+			status1.Interfaces[0].State == ra.Running
 	}, time.Second*10, time.Millisecond*500)
 
 	t.Log("RAs are being sent. Starting BGP.")

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/YutaroHayakawa/go-radv"
+	"github.com/YutaroHayakawa/go-ra"
 )
 
 type Client struct {
@@ -21,7 +21,7 @@ func NewClient(host string) *Client {
 	}
 }
 
-func (c *Client) Reload(config *radv.Config) error {
+func (c *Client) Reload(config *ra.Config) error {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (c *Client) Reload(config *radv.Config) error {
 	return &e
 }
 
-func (c *Client) Status() (*radv.Status, error) {
+func (c *Client) Status() (*ra.Status, error) {
 	res, err := c.Get("http://" + c.host + "/status")
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (c *Client) Status() (*radv.Status, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
-		var status radv.Status
+		var status ra.Status
 		if err := json.NewDecoder(res.Body).Decode(&status); err != nil {
 			return nil, fmt.Errorf("failed to decode status response: %s", err)
 		}

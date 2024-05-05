@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YutaroHayakawa/go-radv"
+	"github.com/YutaroHayakawa/go-ra"
 	"github.com/lorenzosaino/go-sysctl"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/stretchr/testify/require"
@@ -64,14 +64,14 @@ func TestSolicitedRA(t *testing.T) {
 	err = netlink.LinkSetUp(link1)
 	require.NoError(t, err)
 
-	// Start radvd
-	t.Log("Starting radvd")
+	// Start rad
+	t.Log("Starting rad")
 
 	ctx := context.Background()
 
-	// Start radvd on veth0
-	radvd0, err := radv.NewDaemon(&radv.Config{
-		Interfaces: []*radv.InterfaceConfig{
+	// Start rad on veth0
+	rad0, err := ra.NewDaemon(&ra.Config{
+		Interfaces: []*ra.InterfaceConfig{
 			{
 				Name: veth0Name,
 				// Set this to super long to avoid sending unsolicited RAs.
@@ -81,15 +81,15 @@ func TestSolicitedRA(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	go radvd0.Run(ctx)
+	go rad0.Run(ctx)
 
 	// Wait until the RA sender is ready
 	require.Eventually(t, func() bool {
-		status := radvd0.Status()
-		return status.Interfaces[0].State == radv.Running
+		status := rad0.Status()
+		return status.Interfaces[0].State == ra.Running
 	}, time.Second*10, 100*time.Millisecond)
 
-	t.Logf("radvd is ready. Down -> Up %s to send RS", veth1Name)
+	t.Logf("rad is ready. Down -> Up %s to send RS", veth1Name)
 
 	// Down and up the link to trigger an RS
 	err = netlink.LinkSetDown(link1)
@@ -101,7 +101,7 @@ func TestSolicitedRA(t *testing.T) {
 	// Ensure the neighbor entry is created
 	require.Eventually(t, func() bool {
 		_, err := oc.GetIPv6LinkLocalNeighborAddress(veth1Name)
-		status := radvd0.Status()
+		status := rad0.Status()
 		return err == nil && status.Interfaces[0].TxSolicitedRA > 0
 	}, time.Second*10, 100*time.Millisecond)
 

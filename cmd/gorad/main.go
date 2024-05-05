@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os/signal"
 
-	"github.com/YutaroHayakawa/go-radv"
-	"github.com/YutaroHayakawa/go-radv/cmd/internal"
+	"github.com/YutaroHayakawa/go-ra"
+	"github.com/YutaroHayakawa/go-ra/cmd/internal"
 
 	"golang.org/x/sys/unix"
 )
@@ -22,15 +22,15 @@ func main() {
 		return
 	}
 
-	config, err := radv.ParseConfigYAMLFile(*configFile)
+	config, err := ra.ParseConfigYAMLFile(*configFile)
 	if err != nil {
 		slog.Error("Failed to parse config file. Aborting.", "error", err.Error())
 		return
 	}
 
-	daemon, err := radv.NewDaemon(
+	daemon, err := ra.NewDaemon(
 		config,
-		radv.WithLogger(slog.With("component", "daemon")),
+		ra.WithLogger(slog.With("component", "daemon")),
 	)
 	if err != nil {
 		slog.Error("Failed to create daemon. Aborting.", "error", err.Error())

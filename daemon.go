@@ -1,4 +1,4 @@
-package radv
+package ra
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Daemon is the main struct for the radv daemon
+// Daemon is the main struct for the ra daemon
 type Daemon struct {
 	initialConfig     *Config
 	reloadCh          chan *Config
