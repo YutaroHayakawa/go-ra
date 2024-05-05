@@ -16,13 +16,16 @@ import (
 )
 
 func TestGoBGPUnnumbered(t *testing.T) {
+	veth0Name := vethPair0[0]
+	veth1Name := vethPair0[1]
+
 	// Create veth pair
 	err := netlink.LinkAdd(&netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:      "go-radv0",
+			Name:      veth0Name,
 			OperState: netlink.OperUp,
 		},
-		PeerName: "go-radv1",
+		PeerName: veth1Name,
 	})
 	require.NoError(t, err)
 
@@ -30,15 +33,15 @@ func TestGoBGPUnnumbered(t *testing.T) {
 		t.Log("Cleaning up veth pair")
 		netlink.LinkDel(&netlink.Veth{
 			LinkAttrs: netlink.LinkAttrs{
-				Name: "go-radv0",
+				Name: veth0Name,
 			},
 		})
 	})
 
-	link0, err := netlink.LinkByName("go-radv0")
+	link0, err := netlink.LinkByName(veth0Name)
 	require.NoError(t, err)
 
-	link1, err := netlink.LinkByName("go-radv1")
+	link1, err := netlink.LinkByName(veth1Name)
 	require.NoError(t, err)
 
 	err = netlink.LinkSetUp(link0)
@@ -52,16 +55,16 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	sysctlClient, err := sysctl.NewClient(sysctl.DefaultPath)
 	require.NoError(t, err)
 
-	err = sysctlClient.Set("net.ipv6.conf.go-radv0.forwarding", "1")
+	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".forwarding", "1")
 	require.NoError(t, err)
 
-	err = sysctlClient.Set("net.ipv6.conf.go-radv0.accept_ra", "2")
+	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".accept_ra", "2")
 	require.NoError(t, err)
 
-	err = sysctlClient.Set("net.ipv6.conf.go-radv1.forwarding", "1")
+	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".forwarding", "1")
 	require.NoError(t, err)
 
-	err = sysctlClient.Set("net.ipv6.conf.go-radv1.accept_ra", "2")
+	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra", "2")
 	require.NoError(t, err)
 
 	t.Log("Sysctl set. Starting radvd.")
@@ -72,7 +75,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	radvd0, err := radv.NewDaemon(&radv.Config{
 		Interfaces: []*radv.InterfaceConfig{
 			{
-				Name:                   "go-radv0",
+				Name:                   veth0Name,
 				RAIntervalMilliseconds: 1000,
 			},
 		},
@@ -82,7 +85,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	radvd1, err := radv.NewDaemon(&radv.Config{
 		Interfaces: []*radv.InterfaceConfig{
 			{
-				Name:                   "go-radv1",
+				Name:                   veth1Name,
 				RAIntervalMilliseconds: 1000,
 			},
 		},
@@ -136,10 +139,10 @@ func TestGoBGPUnnumbered(t *testing.T) {
 
 	t.Log("Started BGP. Adding peers.")
 
-	lladdr0, err := oc.GetIPv6LinkLocalNeighborAddress("go-radv0")
+	lladdr0, err := oc.GetIPv6LinkLocalNeighborAddress(veth0Name)
 	require.NoError(t, err)
 
-	lladdr1, err := oc.GetIPv6LinkLocalNeighborAddress("go-radv1")
+	lladdr1, err := oc.GetIPv6LinkLocalNeighborAddress(veth1Name)
 	require.NoError(t, err)
 
 	// Set up unnumbered peer
@@ -148,7 +151,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 			Conf: &apipb.PeerConf{
 				PeerAsn:           64512,
 				NeighborAddress:   lladdr0,
-				NeighborInterface: "go-radv0",
+				NeighborInterface: veth0Name,
 			},
 			Transport: &apipb.Transport{
 				RemotePort: 11179,
@@ -167,7 +170,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 			Conf: &apipb.PeerConf{
 				PeerAsn:           64512,
 				NeighborAddress:   lladdr1,
-				NeighborInterface: "go-radv1",
+				NeighborInterface: veth1Name,
 			},
 			Transport: &apipb.Transport{
 				RemotePort: 10179,
@@ -187,7 +190,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 		var peer0, peer1 *apipb.Peer
 
 		if err := bgpd0.ListPeer(ctx, &apipb.ListPeerRequest{}, func(p *apipb.Peer) {
-			if p.Conf.NeighborInterface == "go-radv0" {
+			if p.Conf.NeighborInterface == veth0Name {
 				peer0 = p
 			}
 		}); err != nil {
@@ -195,7 +198,7 @@ func TestGoBGPUnnumbered(t *testing.T) {
 		}
 
 		if err := bgpd1.ListPeer(ctx, &apipb.ListPeerRequest{}, func(p *apipb.Peer) {
-			if p.Conf.NeighborInterface == "go-radv1" {
+			if p.Conf.NeighborInterface == veth1Name {
 				peer1 = p
 			}
 		}); err != nil {
