@@ -30,6 +30,7 @@ type InterfaceConfig struct {
 	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" json:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
 }
 
+// ValidationErrors is a type alias for the validator.ValidationErrors
 type ValidationErrors = validator.ValidationErrors
 
 func (c *Config) defaultAndValidate() error {
@@ -88,6 +89,9 @@ func (c *Config) defaultAndValidate() error {
 	return nil
 }
 
+// ParseConfigJSON parses the JSON-encoded configuration from the reader. This
+// function doesn't validate the configuration. The configuration is validated
+// when you pass it to the Daemon.
 func ParseConfigJSON(r io.Reader) (*Config, error) {
 	var c Config
 
@@ -98,6 +102,9 @@ func ParseConfigJSON(r io.Reader) (*Config, error) {
 	return &c, nil
 }
 
+// ParseConfigYAML parses the YAML-encoded configuration from the reader. This
+// function doesn't validate the configuration. The configuration is validated
+// when you pass it to the Daemon.
 func ParseConfigYAML(r io.Reader) (*Config, error) {
 	var c Config
 
@@ -108,7 +115,10 @@ func ParseConfigYAML(r io.Reader) (*Config, error) {
 	return &c, nil
 }
 
-func ParseConfigFile(path string) (*Config, error) {
+// ParseConfigYAMLFile parses the YAML-encoded configuration from the file at
+// the given path. This function doesn't validate the configuration. The
+// configuration is validated when you pass it to the Daemon.
+func ParseConfigYAMLFile(path string) (*Config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

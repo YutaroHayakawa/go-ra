@@ -23,7 +23,7 @@ interfaces:
 		defer os.Remove(f.Name())
 		_, err = f.Write([]byte(conf))
 		require.NoError(t, err)
-		c, err := ParseConfigFile(f.Name())
+		c, err := ParseConfigYAMLFile(f.Name())
 		require.NoError(t, err)
 		require.NotNil(t, c)
 		require.Len(t, c.Interfaces, 2)

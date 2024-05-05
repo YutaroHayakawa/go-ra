@@ -19,7 +19,8 @@ type Daemon struct {
 	raSendersLock sync.RWMutex
 }
 
-// NewDaemon creates a new Daemon instance with the provided configuration and options
+// NewDaemon creates a new Daemon instance with the provided configuration and
+// options. It returns ValidationErrors if the configuration is invalid.
 func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	// Take a copy of the new configuration. c.validate() will modify it to
 	// set default values.
@@ -129,7 +130,8 @@ reload:
 // function is used to cancel the potentially long-running operations during
 // the reload process. Currently, the result of the unsucecssful or cancelled
 // reload is undefined and the daemon may be running with either the old or the
-// new configuration or both.
+// new configuration or both. It returns ValidationErrors if the configuration
+// is invalid.
 func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 	// Take a copy of the new configuration. c.validate() will modify it to
 	// set default values.

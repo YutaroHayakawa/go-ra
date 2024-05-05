@@ -62,7 +62,7 @@ func reload(config string) {
 		os.Exit(1)
 	}
 
-	c, err := radv.ParseConfigFile(config)
+	c, err := radv.ParseConfigYAMLFile(config)
 	if err != nil {
 		fmt.Printf("Failed to parse the configuration file: %s\n", err.Error())
 		os.Exit(1)

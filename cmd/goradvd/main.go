@@ -42,7 +42,7 @@ func main() {
 		return
 	}
 
-	config, err := radv.ParseConfigFile(*configFile)
+	config, err := radv.ParseConfigYAMLFile(*configFile)
 	if err != nil {
 		slog.Error("Failed to parse config file. Aborting.", "error", err.Error())
 		return
