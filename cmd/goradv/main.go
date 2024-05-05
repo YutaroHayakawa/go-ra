@@ -40,7 +40,7 @@ func main() {
 			config string
 		)
 		command := flag.NewFlagSet("reload", flag.ExitOnError)
-		command.StringVar(&config, "c", "/etc/goradvd.conf", "Path to the configuration file")
+		command.StringVar(&config, "f", "", "config file path")
 		command.Parse(os.Args[2:])
 		reload(config)
 	}
@@ -57,6 +57,11 @@ func main() {
 }
 
 func reload(config string) {
+	if config == "" {
+		fmt.Printf("Config file path is required. Aborting.")
+		os.Exit(1)
+	}
+
 	c, err := radv.ParseConfigFile(config)
 	if err != nil {
 		fmt.Printf("Failed to parse the configuration file: %s\n", err.Error())
