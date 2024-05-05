@@ -1,6 +1,7 @@
 package radv
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func TestConfigParsers(t *testing.T) {
-	conf := `
+	yamlConf := `
 interfaces:
   - name: net0
     raIntervalMilliseconds: 1000
@@ -17,11 +18,11 @@ interfaces:
     raIntervalMilliseconds: 1000
 `
 
-	t.Run("ParseConfigFile", func(t *testing.T) {
+	t.Run("ParseConfigYAMLFile", func(t *testing.T) {
 		f, err := os.CreateTemp(".", "radv-test")
 		require.NoError(t, err)
 		defer os.Remove(f.Name())
-		_, err = f.Write([]byte(conf))
+		_, err = f.Write([]byte(yamlConf))
 		require.NoError(t, err)
 		c, err := ParseConfigYAMLFile(f.Name())
 		require.NoError(t, err)
@@ -32,6 +33,33 @@ interfaces:
 		require.Equal(t, "net1", c.Interfaces[1].Name)
 		require.Equal(t, 1000, c.Interfaces[1].RAIntervalMilliseconds)
 	})
+
+	jsonConf := `
+{
+	"interfaces": [
+		{
+			"name": "net0",
+			"raIntervalMilliseconds": 1000
+		},
+		{
+			"name": "net1",
+			"raIntervalMilliseconds": 1000
+		}
+	]
+}
+`
+
+	t.Run("ParseConfigJSON", func(t *testing.T) {
+		c, err := ParseConfigJSON(bytes.NewBuffer([]byte(jsonConf)))
+		require.NoError(t, err)
+		require.NotNil(t, c)
+		require.Len(t, c.Interfaces, 2)
+		require.Equal(t, "net0", c.Interfaces[0].Name)
+		require.Equal(t, 1000, c.Interfaces[0].RAIntervalMilliseconds)
+		require.Equal(t, "net1", c.Interfaces[1].Name)
+		require.Equal(t, 1000, c.Interfaces[1].RAIntervalMilliseconds)
+	})
+
 }
 
 func TestConfigValidation(t *testing.T) {
