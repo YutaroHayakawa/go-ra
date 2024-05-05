@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Authors of go-ra
+
 package integration_tests
 
 // This file manages the assignment of the shared resources used by the
