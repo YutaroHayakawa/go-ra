@@ -31,6 +31,12 @@ type raSender struct {
 	socketCtor rAdvSocketCtor
 }
 
+// An internal structure to represent RS
+type rsMsg struct {
+	rs   *ndp.RouterSolicitation
+	from netip.Addr
+}
+
 func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *slog.Logger) *raSender {
 	return &raSender{
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
@@ -78,10 +84,14 @@ func (s *raSender) reportStopped(err error) {
 	}
 }
 
-func (s *raSender) incTxStat() {
+func (s *raSender) incTxStat(solicited bool) {
 	s.statusLock.Lock()
 	defer s.statusLock.Unlock()
-	s.status.TxUnsolicitedRA++
+	if solicited {
+		s.status.TxSolicitedRA++
+	} else {
+		s.status.TxUnsolicitedRA++
+	}
 }
 
 func (s *raSender) setLastUpdate() {
@@ -126,6 +136,19 @@ func (s *raSender) run(ctx context.Context) {
 		return
 	}
 
+	// Launch the RS receiver
+	rsCh := make(chan *rsMsg)
+	go func() {
+		for {
+			rs, addr, err := s.sock.recvRS(ctx)
+			if err != nil {
+				s.reportFailing(err)
+				continue
+			}
+			rsCh <- &rsMsg{rs: rs, from: addr}
+		}
+	}()
+
 	s.reportRunning()
 
 reload:
@@ -144,13 +167,25 @@ reload:
 
 		for {
 			select {
+			case rs := <-rsCh:
+				// Reply to RS
+				//
+				// TODO: Rate limit this to mitigate RS flooding attack
+				err := s.sock.sendRA(ctx, rs.from, msg)
+				if err != nil {
+					s.reportFailing(err)
+					continue
+				}
+				s.incTxStat(true)
+				s.reportRunning()
 			case <-ticker.C:
+				// Send unsolicited RA
 				err := s.sock.sendRA(ctx, netip.IPv6LinkLocalAllNodes(), msg)
 				if err != nil {
 					s.reportFailing(err)
 					continue
 				}
-				s.incTxStat()
+				s.incTxStat(false)
 				s.reportRunning()
 			case newConfig := <-s.reloadCh:
 				if reflect.DeepEqual(config, newConfig) {

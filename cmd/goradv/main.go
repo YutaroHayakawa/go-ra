@@ -119,11 +119,11 @@ func status(output string) {
 	switch output {
 	case "table":
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
-		fmt.Fprintln(w, "Name\tAge\tTxUnsolicited\tState\tMessage")
+		fmt.Fprintln(w, "Name\tAge\tTxUnsolicited\tTxSolicited\tState\tMessage")
 		for _, iface := range status.Interfaces {
 			age := time.Duration(time.Now().Unix()-iface.LastUpdate) * time.Second
 			age = age.Round(time.Second)
-			fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", iface.Name, age.String(), iface.TxUnsolicitedRA, iface.State, iface.Message)
+			fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%s\t%s\n", iface.Name, age.String(), iface.TxUnsolicitedRA, iface.TxSolicitedRA, iface.State, iface.Message)
 		}
 		w.Flush()
 

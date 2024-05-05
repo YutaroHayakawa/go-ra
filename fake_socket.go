@@ -32,8 +32,9 @@ func (r *fakeSockRegistry) newSock(iface string) (rAdvSocket, error) {
 	}
 
 	fs := &fakeSock{
-		tx: make(chan fakeRA, 128),
-		rx: make(chan fakeRS, 128),
+		txMulticast: make(chan fakeRA, 128),
+		txLLUnicast: make(chan fakeRA, 128),
+		rx:          make(chan fakeRS, 128),
 	}
 	r.reg[iface] = fs
 
@@ -54,9 +55,10 @@ func (r *fakeSockRegistry) getSock(iface string) (*fakeSock, error) {
 
 // A fake socket
 type fakeSock struct {
-	tx     chan fakeRA
-	rx     chan fakeRS
-	closed atomic.Bool
+	txMulticast chan fakeRA
+	txLLUnicast chan fakeRA
+	rx          chan fakeRS
+	closed      atomic.Bool
 }
 
 type fakeRA struct {
@@ -72,8 +74,16 @@ type fakeRS struct {
 
 var _ rAdvSocket = &fakeSock{}
 
-func (s *fakeSock) txCh() <-chan fakeRA {
-	return s.tx
+func (s *fakeSock) txMulticastCh() <-chan fakeRA {
+	return s.txMulticast
+}
+
+func (s *fakeSock) txLLUnicastCh() <-chan fakeRA {
+	return s.txLLUnicast
+}
+
+func (s *fakeSock) rxCh() chan<- fakeRS {
+	return s.rx
 }
 
 func (s *fakeSock) hardwareAddr() net.HardwareAddr {
@@ -81,11 +91,23 @@ func (s *fakeSock) hardwareAddr() net.HardwareAddr {
 }
 
 func (s *fakeSock) sendRA(_ context.Context, addr netip.Addr, msg *ndp.RouterAdvertisement) error {
-	select {
-	case s.tx <- fakeRA{tstamp: time.Now(), msg: msg, to: addr}:
-		return nil
-	default:
-		return fmt.Errorf("tx channel is full")
+	ra := fakeRA{tstamp: time.Now(), msg: msg, to: addr}
+	if addr.IsMulticast() {
+		select {
+		case s.txMulticast <- ra:
+			return nil
+		default:
+			return fmt.Errorf("tx multicast channel is full")
+		}
+	} else if addr.IsLinkLocalUnicast() {
+		select {
+		case s.txLLUnicast <- ra:
+			return nil
+		default:
+			return fmt.Errorf("tx link-local unicast channel is full")
+		}
+	} else {
+		return fmt.Errorf("unsupported address type")
 	}
 }
 
@@ -99,7 +121,7 @@ func (s *fakeSock) recvRS(ctx context.Context) (*ndp.RouterSolicitation, netip.A
 }
 
 func (s *fakeSock) close() {
-	close(s.tx)
+	close(s.txMulticast)
 	close(s.rx)
 	s.closed.Store(true)
 }

@@ -2,9 +2,11 @@ package radv
 
 import (
 	"context"
+	"net/netip"
 	"testing"
 	"time"
 
+	"github.com/mdlayher/ndp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +27,7 @@ outer:
 		case <-timeout.Done():
 			cancel()
 			return assert.Fail(t, "couldn't get 3 RAs in time")
-		case ra := <-sock.txCh():
+		case ra := <-sock.txMulticastCh():
 			ras = append(ras, ra)
 			if len(ras) == 3 {
 				cancel()
@@ -119,6 +121,28 @@ func TestDaemonHappyPath(t *testing.T) {
 			return assertRAInterval(t, sock0, time.Millisecond*100) &&
 				assertRAInterval(t, sock1, time.Millisecond*200)
 		})
+	})
+
+	t.Run("Ensure RS is replied with unicast RA", func(t *testing.T) {
+		sock, err := reg.getSock("net0")
+		require.NoError(t, err)
+
+		from := netip.MustParseAddr("fe80::1%net0")
+
+		rs := &ndp.RouterSolicitation{}
+
+		// Send RS
+		sock.rxCh() <- fakeRS{msg: rs, from: from}
+
+		// Wait for solicited RA
+		timeout, cancelTimeout := context.WithTimeout(context.Background(), time.Second*1)
+		select {
+		case ra := <-sock.txLLUnicastCh():
+			require.Equal(t, ra.to, from)
+		case <-timeout.Done():
+			require.Fail(t, "timeout waiting for RA")
+		}
+		cancelTimeout()
 	})
 
 	t.Run("Ensure unsolicited RA is stopped after removing configuration", func(t *testing.T) {

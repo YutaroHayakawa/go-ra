@@ -17,5 +17,6 @@ type InterfaceStatus struct {
 	Message string `yaml:"message,omitempty" json:"message,omitempty"`
 
 	LastUpdate      int64 `yaml:"lastUpdate" json:"lastUpdate"`
+	TxSolicitedRA   int   `yaml:"txSolicitedRA" json:"txSolicitedRA"`
 	TxUnsolicitedRA int   `yaml:"txUnsolicitedRA" json:"txUnsolicitedRA"`
 }

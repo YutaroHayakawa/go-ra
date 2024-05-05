@@ -5,4 +5,7 @@ package integration_tests
 var (
 	// Assigned to the TestGoBGPUnnumbered
 	vethPair0 = []string{"go-radv0", "go-radv1"}
+
+	// Assigned to the TestSolictedRA
+	vethPair1 = []string{"go-radv2", "go-radv3"}
 )
