@@ -45,7 +45,7 @@ for _, iface := range status.Interfaces {
 config.Interfaces[0].RAIntervalMilliseconds = 2000 // 2sec
 err := daemon.Reload(ctx, &config)
 if err != nil {
-		panic(err)
+    panic(err)
 }
 
 // Stop it
