@@ -27,7 +27,7 @@ type Daemon struct {
 func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 	// Take a copy of the new configuration. c.validate() will modify it to
 	// set default values.
-	c := config.DeepCopy()
+	c := config.deepCopy()
 
 	// Validate the configuration first
 	if err := c.defaultAndValidate(); err != nil {
@@ -138,7 +138,7 @@ reload:
 func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 	// Take a copy of the new configuration. c.validate() will modify it to
 	// set default values.
-	c := newConfig.DeepCopy()
+	c := newConfig.deepCopy()
 
 	if err := c.defaultAndValidate(); err != nil {
 		return err

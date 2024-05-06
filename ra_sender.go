@@ -217,7 +217,7 @@ reload:
 func (s *raSender) getStatus() *InterfaceStatus {
 	s.statusLock.RLock()
 	defer s.statusLock.RUnlock()
-	return s.status.DeepCopy()
+	return s.status.deepCopy()
 }
 
 func (s *raSender) reload(ctx context.Context, newConfig *InterfaceConfig) error {

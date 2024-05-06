@@ -18,10 +18,5 @@ jobs:
       with:
         go-version-file: ./go.mod
 
-    - name: Install deep-copy
-      run: |
-        go get -u github.com/globusdigital/deep-copy
-        go install github.com/globusdigital/deep-copy
-
     - name: Check deepcopy
       run: make check-deepcopy
