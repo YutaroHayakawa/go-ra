@@ -54,7 +54,9 @@ cancel()
 
 ### As a stand-alone daemon
 
-Create a configuration file.
+Create a configuration file. This configuration will be translated into the
+[Config](https://pkg.go.dev/github.com/YutaroHayakawa/go-ra#Config) object
+and passed to the daemon. Please see the godoc for more details.
 
 ```yaml
 interfaces:
