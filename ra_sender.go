@@ -103,12 +103,6 @@ func (s *raSender) setLastUpdate() {
 	s.status.LastUpdate = time.Now().Unix()
 }
 
-func (s *raSender) resetStat() {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.TxUnsolicitedRA = 0
-}
-
 func (s *raSender) run(ctx context.Context) {
 	// The current desired configuration
 	config := s.initialConfig
@@ -197,7 +191,6 @@ reload:
 				}
 				config = newConfig
 				s.reportReloading()
-				s.resetStat()
 				s.setLastUpdate()
 				continue reload
 			case <-ctx.Done():
