@@ -165,6 +165,20 @@ reload:
 			},
 		}
 
+		for _, prefix := range config.Prefixes {
+			// At this point, we should have validated the
+			// configuration. If we haven't, it's a bug.
+			p := netip.MustParsePrefix(prefix.Prefix)
+			msg.Options = append(msg.Options, &ndp.PrefixInformation{
+				PrefixLength:                   uint8(p.Bits()),
+				OnLink:                         prefix.OnLink,
+				AutonomousAddressConfiguration: prefix.Autonomous,
+				ValidLifetime:                  time.Second * time.Duration(*prefix.ValidLifetimeSeconds),
+				PreferredLifetime:              time.Second * time.Duration(*prefix.PreferredLifetimeSeconds),
+				Prefix:                         p.Addr(),
+			})
+		}
+
 		// For unsolicited RA
 		ticker := time.NewTicker(time.Duration(config.RAIntervalMilliseconds) * time.Millisecond)
 

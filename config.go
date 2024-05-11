@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/netip"
 	"os"
 
 	"github.com/creasty/defaults"
@@ -66,6 +67,36 @@ type InterfaceConfig struct {
 	// If set to zero, it means the retransmission time is unspecified by
 	// this router.
 	RetransmitTimeMilliseconds int `yaml:"retransmitTimeMilliseconds" json:"retransmitTimeMilliseconds" validate:"gte=0,lte=4294967295"`
+
+	// Prefix-specific configuration parameters. The prefix fields must be
+	// non-overlapping with each other. The slice itself and elements must
+	// not be nil.
+	Prefixes []*PrefixConfig `yaml:"prefixes" json:"prefixes" validate:"non_nil_and_non_overlapping_prefix,dive,required"`
+}
+
+// PrefixConfig represents the prefix-specific configuration parameters
+type PrefixConfig struct {
+	// Required: Prefix. Must be a valid IPv6 prefix.
+	Prefix string `yaml:"prefix" json:"prefix" validate:"required,cidrv6"`
+
+	// Set L (On-Link) flag. When set, it indicates that this prefix can be
+	// used for on-link determination. Default is false.
+	OnLink bool `yaml:"onLink" json:"onLink"`
+
+	// Set A (Autonomous address-configuration) flag. When set, it indicates
+	// that this prefix can be used for stateless address autoconfiguration.
+	// Default is false.
+	Autonomous bool `yaml:"autonomous" json:"autonomous"`
+
+	// The valid lifetime of the prefix in seconds. Must be >= 0 and <=
+	// 4294967295 and must be >= PreferredLifetimeSeconds. Default is
+	// 2592000 (30 days). If set to 4294967295, it indicates infinity.
+	ValidLifetimeSeconds *int `yaml:"validLifetimeSeconds" json:"validLifetimeSeconds" validate:"required,gte=0,lte=4294967295" default:"2592000"`
+
+	// The preferred lifetime of the prefix in seconds. Must be >= 0 and <=
+	// 4294967295 and must be <= ValidLifetimeSeconds. Default is 604800 (7
+	// days). If set to 4294967295, it indicates infinity.
+	PreferredLifetimeSeconds *int `yaml:"preferredLifetimeSeconds" json:"preferredLifetimeSeconds" validate:"required,gte=0,ltefield=ValidLifetimeSeconds" default:"604800"`
 }
 
 // ValidationErrors is a type alias for the validator.ValidationErrors
@@ -103,6 +134,40 @@ func (c *Config) defaultAndValidate() error {
 				return false
 			} else {
 				names[name.String()] = struct{}{}
+			}
+		}
+
+		return true
+	})
+
+	validate.RegisterValidation("non_nil_and_non_overlapping_prefix", func(fl validator.FieldLevel) bool {
+		prefixes := []netip.Prefix{}
+
+		prefixSlice := fl.Field()
+		for i := 0; i < prefixSlice.Len(); i++ {
+			prefixElemp := prefixSlice.Index(i)
+			if prefixElemp.IsNil() {
+				return false
+			}
+
+			prefixElem := prefixElemp.Elem()
+			prefix := prefixElem.FieldByName("Prefix")
+
+			p, err := netip.ParsePrefix(prefix.String())
+			if err != nil {
+				// Just ignore this error here. cidrv6 constraint will catch it later.
+				continue
+			}
+
+			prefixes = append(prefixes, p)
+		}
+
+		// Check the prefix is not overlapping with each other
+		for _, p0 := range prefixes {
+			for _, p1 := range prefixes {
+				if p0 != p1 && p0.Overlaps(p1) {
+					return false
+				}
 			}
 		}
 

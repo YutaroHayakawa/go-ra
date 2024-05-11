@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 )
 
 func TestConfigParsers(t *testing.T) {
@@ -280,6 +281,231 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "RetransmitTimeMilliseconds",
 			errorTag:    "lte",
 		},
+		{
+			name: "Nil PrefixConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes:               nil,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Empty PrefixConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes:               []*PrefixConfig{},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil PrefixConfig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes:               []*PrefixConfig{nil},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefixes",
+			errorTag:    "non_nil_and_non_overlapping_prefix",
+		},
+		{
+			name: "No Prefix",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								OnLink: true,
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefix",
+			errorTag:    "required",
+		},
+		{
+			name: "Overlapping Prefix",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix: "2001:db8::/32",
+							},
+							{
+								Prefix: "2001:db8::/64",
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefixes",
+			errorTag:    "non_nil_and_non_overlapping_prefix",
+		},
+		{
+			name: "ValidLifetimeSeconds = 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:               "2001:db8::/64",
+								ValidLifetimeSeconds: ptr.To(4294967295),
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "ValidLifetimeSeconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:               "2001:db8::/64",
+								ValidLifetimeSeconds: ptr.To(-1),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "ValidLifetimeSeconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "ValidLifetimeSeconds > 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:               "2001:db8::/64",
+								ValidLifetimeSeconds: ptr.To(4294967296),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "ValidLifetimeSeconds",
+			errorTag:    "lte",
+		},
+		{
+			name: "PreferredLifetimeSeconds = 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:                   "2001:db8::/64",
+								ValidLifetimeSeconds:     ptr.To(4294967295), // PreferredLifetimeSeconds must be less than ValidLifetimeSeconds
+								PreferredLifetimeSeconds: ptr.To(4294967295),
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "PreferredLifetimeSeconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:                   "2001:db8::/64",
+								PreferredLifetimeSeconds: ptr.To(-1),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "PreferredLifetimeSeconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "PreferredLifetimeSeconds > 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:                   "2001:db8::/64",
+								ValidLifetimeSeconds:     ptr.To(4294967296),
+								PreferredLifetimeSeconds: ptr.To(4294967296),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			// PreferredLifetimeSeconds must be less than
+			// ValidLifetimeSeconds, but ValdateLifetimeSeconds
+			// must be <= 4294967295, so it's impossible to specify
+			// PreferredLifetimeSeconds > 4294967295 actually.
+			errorField: "ValidLifetimeSeconds",
+			errorTag:   "lte",
+		},
+		{
+			name: "ValidLifetimeSeconds < PreferredLifetimeSeconds",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Prefixes: []*PrefixConfig{
+							{
+								Prefix:                   "2001:db8::/64",
+								ValidLifetimeSeconds:     ptr.To(100),
+								PreferredLifetimeSeconds: ptr.To(101),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "PreferredLifetimeSeconds",
+			errorTag:    "ltefield",
+		},
 	}
 
 	for _, tt := range tests {
@@ -291,9 +517,15 @@ func TestConfigValidation(t *testing.T) {
 			}
 			var verr validator.ValidationErrors
 			require.ErrorAs(t, err, &verr)
-			require.Len(t, verr, 1)
-			require.Equal(t, tt.errorField, verr[0].Field())
-			require.Equal(t, tt.errorTag, verr[0].Tag())
+
+			// Find the target error and we can ignore the rest.
+			for _, v := range verr {
+				if v.Field() == tt.errorField && v.Tag() == tt.errorTag {
+					return
+				}
+			}
+
+			require.Failf(t, "expected error not found", verr.Error())
 		})
 	}
 }
