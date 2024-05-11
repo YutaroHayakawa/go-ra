@@ -151,6 +151,12 @@ func (s *raSender) run(ctx context.Context) {
 reload:
 	for {
 		msg := &ndp.RouterAdvertisement{
+			CurrentHopLimit:      uint8(config.CurrentHopLimit),
+			ManagedConfiguration: config.Managed,
+			OtherConfiguration:   config.Other,
+			RouterLifetime:       time.Duration(config.RouterLifetimeSeconds) * time.Second,
+			ReachableTime:        time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
+			RetransmitTimer:      time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
 			Options: []ndp.Option{
 				&ndp.LinkLayerAddress{
 					Direction: ndp.Source,

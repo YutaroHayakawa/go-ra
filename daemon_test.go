@@ -51,8 +51,14 @@ func TestDaemonHappyPath(t *testing.T) {
 	config := &Config{
 		Interfaces: []*InterfaceConfig{
 			{
-				Name:                   "net0",
-				RAIntervalMilliseconds: 100,
+				Name:                       "net0",
+				RAIntervalMilliseconds:     100,
+				CurrentHopLimit:            10,
+				Managed:                    true,
+				Other:                      true,
+				RouterLifetimeSeconds:      10,
+				ReachableTimeMilliseconds:  10000,
+				RetransmitTimeMilliseconds: 10000,
 			},
 			{
 				Name:                   "net1",
@@ -90,6 +96,22 @@ func TestDaemonHappyPath(t *testing.T) {
 		sock, err = reg.getSock("net1")
 		require.NoError(t, err)
 		require.True(t, assertRAInterval(t, sock, time.Millisecond*100))
+	})
+
+	t.Run("Ensure the RA parameter is reflected to the packet", func(t *testing.T) {
+		sock, err := reg.getSock("net0")
+		require.NoError(t, err)
+
+		// Sampling one RA
+		ra := <-sock.txMulticastCh()
+
+		// Check the parameters
+		require.Equal(t, uint8(10), ra.msg.CurrentHopLimit)
+		require.True(t, ra.msg.ManagedConfiguration)
+		require.True(t, ra.msg.OtherConfiguration)
+		require.Equal(t, time.Second*10, ra.msg.RouterLifetime)
+		require.Equal(t, time.Millisecond*10000, ra.msg.ReachableTime)
+		require.Equal(t, time.Millisecond*10000, ra.msg.RetransmitTimer)
 	})
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {

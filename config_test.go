@@ -160,6 +160,126 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "RAIntervalMilliseconds",
 			errorTag:    "lte",
 		},
+		{
+			name: "CurrentHopLimit < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						CurrentHopLimit:        -1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "CurrentHopLimit",
+			errorTag:    "gte",
+		},
+		{
+			name: "CurrentHopLimit > 255",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						CurrentHopLimit:        256,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "CurrentHopLimit",
+			errorTag:    "lte",
+		},
+		{
+			name: "RouterLifetimeSeconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RouterLifetimeSeconds:  -1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "RouterLifetimeSeconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "RouterLifetimeSeconds > 65535",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RouterLifetimeSeconds:  65536,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "RouterLifetimeSeconds",
+			errorTag:    "lte",
+		},
+		{
+			name: "ReachableTimeMilliseconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                      "net0",
+						RAIntervalMilliseconds:    1000,
+						ReachableTimeMilliseconds: -1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "ReachableTimeMilliseconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "ReachableTimeMilliseconds > 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                      "net0",
+						RAIntervalMilliseconds:    1000,
+						ReachableTimeMilliseconds: 4294967296,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "ReachableTimeMilliseconds",
+			errorTag:    "lte",
+		},
+		{
+			name: "RetransmitTimeMilliseconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                       "net0",
+						RAIntervalMilliseconds:     1000,
+						RetransmitTimeMilliseconds: -1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "RetransmitTimeMilliseconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "RetransmitTimeMilliseconds > 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                       "net0",
+						RAIntervalMilliseconds:     1000,
+						RetransmitTimeMilliseconds: 4294967296,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "RetransmitTimeMilliseconds",
+			errorTag:    "lte",
+		},
 	}
 
 	for _, tt := range tests {

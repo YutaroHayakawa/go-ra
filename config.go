@@ -26,11 +26,46 @@ type Config struct {
 type InterfaceConfig struct {
 	// Required: Network interface name. Must be unique within the configuration.
 	Name string `yaml:"name" json:"name" validate:"required"`
+
 	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000. Default is 600000.
 	// The upper bound is chosen to be compliant with RFC4861. The lower bound is intentionally
 	// chosen to be lower than RFC4861 for faster convergence. If you don't wish to overwhelm the
 	// network, and wish to be compliant with RFC4861, set to higher than 3000 as RFC4861 suggests.
 	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" json:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
+
+	// RA header fields
+
+	// The default value that should be placed in the Hop Count field of
+	// the IP header for outgoing IP packets. Must be >= 0 and <= 255.
+	// Default is 0. If set to zero, it means the reachable time is
+	// unspecified by this router.
+	CurrentHopLimit int `yaml:"currentHopLimit" json:"currentHopLimit" validate:"gte=0,lte=255" default:"0"`
+
+	// Set M (Managed address configuration) flag. When set, it indicates
+	// that addresses are available via DHCPv6. Default is false.
+	Managed bool `yaml:"managed" json:"managed"`
+
+	// Set O (Other configuration) flag. When set, it indicates that other
+	// configuration information is available via DHCPv6. Default is false.
+	Other bool `yaml:"other" json:"other"`
+
+	// The lifetime associated with the default router in seconds. Must be
+	// >= 0 and <= 65535. Default is 0. The upper bound is chosen to be
+	// compliant to the RFC8319. If set to zero, the router is not
+	// considered as a default router.
+	RouterLifetimeSeconds int `yaml:"routerLifetimeSeconds" json:"routerLifetimeSeconds" validate:"gte=0,lte=65535"`
+
+	// The time, in milliseconds, that a node assumes a neighbor is
+	// reachable after having received a reachability confirmation. Must be
+	// >= 0 and <= 4294967295. Default is 0. If set to zero, it means the
+	// reachable time is unspecified by this router.
+	ReachableTimeMilliseconds int `yaml:"reachableTimeMilliseconds" json:"reachableTimeMilliseconds" validate:"gte=0,lte=4294967295"`
+
+	// The time, in milliseconds, between retransmitted Neighbor
+	// Solicitation messages. Must be >= 0 and <= 4294967295. Default is 0.
+	// If set to zero, it means the retransmission time is unspecified by
+	// this router.
+	RetransmitTimeMilliseconds int `yaml:"retransmitTimeMilliseconds" json:"retransmitTimeMilliseconds" validate:"gte=0,lte=4294967295"`
 }
 
 // ValidationErrors is a type alias for the validator.ValidationErrors
