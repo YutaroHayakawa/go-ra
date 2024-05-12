@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os/signal"
 
@@ -15,10 +16,22 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
 func main() {
 	configFile := flag.String("f", "", "config file path")
+	v := flag.Bool("v", false, "show version information")
 
 	flag.Parse()
+
+	if *v {
+		fmt.Printf("Version: %s, Commit: %s, Date: %s\n", version, commit, date)
+		return
+	}
 
 	if *configFile == "" {
 		slog.Error("Config file path is required. Aborting.")

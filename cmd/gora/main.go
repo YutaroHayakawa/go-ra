@@ -16,6 +16,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
 func usageRoot() {
 	fmt.Printf("Usage: %s <subcommand> [options]\n", os.Args[0])
 	fmt.Println()
@@ -23,12 +29,17 @@ func usageRoot() {
 	fmt.Println("  reload\tReload the configuration")
 	fmt.Println("  status\tGet the status of the service")
 	fmt.Println("  help\t\tShow this message")
+	fmt.Println("  version\tShow the version information")
 }
 
 func main() {
 	if len(os.Args) < 2 {
 		usageRoot()
 		os.Exit(1)
+	}
+
+	if os.Args[1] == "version" {
+		fmt.Printf("Version: %s, Commit: %s, Date: %s", version, commit, date)
 	}
 
 	if os.Args[1] == "help" {
