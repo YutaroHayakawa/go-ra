@@ -8,6 +8,7 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm64
     main: ./cmd/gora
     binary: gora
 
@@ -18,6 +19,7 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm64
     main: ./cmd/gorad
     binary: gorad
 
