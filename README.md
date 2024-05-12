@@ -12,7 +12,20 @@ low-level protocol functionalities (packet encoding, raw-socket wrapper, etc),
 `go-ra` implements an unsolicited and solicited advertisement machinery and
 declarative configuration interface on top of it.
 
-## Usage
+## Features
+
+- Basic RA mechanism defined in RFC4861
+- Router MAC address discovery with Source Link Layer Address option
+- TBD: MTU discovery with MTU option
+- Stateless Address Auto Configuration (SLAAC) with Prefix Information option
+- TBD: DNS auto configuration with RDNSS option
+
+## Installation
+
+- Library: Use Go Modules as usual
+- Stand-alone Binary: Visit [release page](https://github.com/YutaroHayakawa/go-ra/releases) and install pre-build binaries
+
+## Basic Usage
 
 ### As a library
 
@@ -85,20 +98,11 @@ Modify and reload configuration
 $ gora reload -f config.yaml
 ```
 
-## Use Case
+## Motivation
 
-If you’re looking for the full-featured RA daemon, maybe
-[radvd](https://radvd.litech.org/) is a better option at this point. The
-advantages of `go-ra` is it is written in pure go and easy to integrate with
-your existing go project.
-
-Our original motivation was use it with
+Our original motivation for this project was use it with
 [gobgp](https://pkg.go.dev/github.com/osrg/gobgp/v3) library to do [BGP
 Unnumbered](https://github.com/osrg/gobgp/blob/master/docs/sources/unnumbered-bgp.md)
 (see our [integration test](integration_tests/gobgp_unnumbered_test.go)) which
 for us, makes sense to reinvent the RA daemon to not introduce an external
-non-go dependency. That’s why currently it only implements very limited
-functionalities enough for our immediate use case.
-
-However, we’re eager to expand the use cases if there’s any demand. The project
-is designed with the extensibility in mind. Contribution is always welcome!
+non-go dependency.
