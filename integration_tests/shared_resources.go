@@ -11,4 +11,7 @@ var (
 
 	// Assigned to the TestSolictedRA
 	vethPair1 = []string{"go-ra2", "go-ra3"}
+
+	// Assigned to the TestPrefixInfo
+	vethPair2 = []string{"go-ra4", "go-ra5"}
 )
