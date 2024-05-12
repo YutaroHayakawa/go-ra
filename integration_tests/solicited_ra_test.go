@@ -9,63 +9,15 @@ import (
 	"time"
 
 	"github.com/YutaroHayakawa/go-ra"
-	"github.com/lorenzosaino/go-sysctl"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/stretchr/testify/require"
 	"github.com/vishvananda/netlink"
 )
 
 func TestSolicitedRA(t *testing.T) {
-	veth0Name := vethPair1[0]
-	veth1Name := vethPair1[1]
-
-	// Create veth pair
-	err := netlink.LinkAdd(&netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:      veth0Name,
-			OperState: netlink.OperUp,
-		},
-		PeerName: veth1Name,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		t.Log("Cleaning up veth pair")
-		netlink.LinkDel(&netlink.Veth{
-			LinkAttrs: netlink.LinkAttrs{
-				Name: veth0Name,
-			},
-		})
-	})
-
-	link0, err := netlink.LinkByName(veth0Name)
-	require.NoError(t, err)
-
-	link1, err := netlink.LinkByName(veth1Name)
-	require.NoError(t, err)
-
-	t.Log("Created veth pair. Setting sysctl.")
-
-	sysctlClient, err := sysctl.NewClient(sysctl.DefaultPath)
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".forwarding", "1")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".accept_ra", "2")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".forwarding", "1")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra", "2")
-	require.NoError(t, err)
-
-	err = netlink.LinkSetUp(link0)
-	require.NoError(t, err)
-
-	err = netlink.LinkSetUp(link1)
-	require.NoError(t, err)
+	f := newFixture(t, fixtureParam{vethPair: vethPair1})
+	veth0Name := f.veth0.Attrs().Name
+	veth1Name := f.veth1.Attrs().Name
 
 	// Start rad
 	t.Log("Starting rad")
@@ -95,10 +47,10 @@ func TestSolicitedRA(t *testing.T) {
 	t.Logf("rad is ready. Down -> Up %s to send RS", veth1Name)
 
 	// Down and up the link to trigger an RS
-	err = netlink.LinkSetDown(link1)
+	err = netlink.LinkSetDown(f.veth1)
 	require.NoError(t, err)
 
-	err = netlink.LinkSetUp(link1)
+	err = netlink.LinkSetUp(f.veth1)
 	require.NoError(t, err)
 
 	// Ensure the neighbor entry is created

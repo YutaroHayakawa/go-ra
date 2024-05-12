@@ -9,68 +9,19 @@ import (
 	"time"
 
 	"github.com/YutaroHayakawa/go-ra"
-	"github.com/lorenzosaino/go-sysctl"
 
 	apipb "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/osrg/gobgp/v3/pkg/server"
 	"github.com/stretchr/testify/require"
-	"github.com/vishvananda/netlink"
 )
 
 func TestGoBGPUnnumbered(t *testing.T) {
-	veth0Name := vethPair0[0]
-	veth1Name := vethPair0[1]
+	f := newFixture(t, fixtureParam{vethPair: vethPair0})
+	veth0Name := f.veth0.Attrs().Name
+	veth1Name := f.veth1.Attrs().Name
 
-	// Create veth pair
-	err := netlink.LinkAdd(&netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:      veth0Name,
-			OperState: netlink.OperUp,
-		},
-		PeerName: veth1Name,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		t.Log("Cleaning up veth pair")
-		netlink.LinkDel(&netlink.Veth{
-			LinkAttrs: netlink.LinkAttrs{
-				Name: veth0Name,
-			},
-		})
-	})
-
-	link0, err := netlink.LinkByName(veth0Name)
-	require.NoError(t, err)
-
-	link1, err := netlink.LinkByName(veth1Name)
-	require.NoError(t, err)
-
-	err = netlink.LinkSetUp(link0)
-	require.NoError(t, err)
-
-	err = netlink.LinkSetUp(link1)
-	require.NoError(t, err)
-
-	t.Log("Created veth pair. Setting sysctl.")
-
-	sysctlClient, err := sysctl.NewClient(sysctl.DefaultPath)
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".forwarding", "1")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".accept_ra", "2")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".forwarding", "1")
-	require.NoError(t, err)
-
-	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra", "2")
-	require.NoError(t, err)
-
-	t.Log("Sysctl set. Starting rad.")
+	t.Log("Starting rad")
 
 	ctx := context.Background()
 
