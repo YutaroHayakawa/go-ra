@@ -16,7 +16,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.20.0
-	golang.org/x/tools v0.20.0
+	golang.org/x/tools v0.21.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 )
