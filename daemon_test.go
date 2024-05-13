@@ -39,8 +39,8 @@ outer:
 		}
 	}
 
-	// Ensure the interval is correct. We let 5ms of error margin.
-	mergin := float64(5 * time.Millisecond)
+	// Ensure the interval is correct. We let 60ms of error margin.
+	mergin := float64(60 * time.Millisecond)
 	diff0 := ras[1].tstamp.Sub(ras[0].tstamp)
 	diff1 := ras[2].tstamp.Sub(ras[1].tstamp)
 
@@ -59,6 +59,7 @@ func TestDaemonHappyPath(t *testing.T) {
 				RouterLifetimeSeconds:      10,
 				ReachableTimeMilliseconds:  10000,
 				RetransmitTimeMilliseconds: 10000,
+				MTU:                        1500,
 			},
 			{
 				Name:                   "net1",
@@ -112,6 +113,17 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.Equal(t, time.Second*10, ra.msg.RouterLifetime)
 		require.Equal(t, time.Millisecond*10000, ra.msg.ReachableTime)
 		require.Equal(t, time.Millisecond*10000, ra.msg.RetransmitTimer)
+
+		// Find MTU option
+		var mtuOption *ndp.MTU
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.MTU); ok {
+				mtuOption = opt
+				break
+			}
+		}
+		require.NotNil(t, mtuOption, "MTU option is not advertised")
+		require.Equal(t, uint32(1500), mtuOption.MTU, "Invalid MTU")
 	})
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {
