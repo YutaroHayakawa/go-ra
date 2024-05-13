@@ -1,7 +1,6 @@
 name: goreleaser
 
 on:
-  pull_request:
   push:
     # Run when we push the tag
     tags:
