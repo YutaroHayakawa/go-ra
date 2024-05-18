@@ -17,8 +17,9 @@ declarative configuration interface on top of it.
 - Basic RA mechanism defined in RFC4861
 - Router MAC address discovery with Source Link Layer Address option
 - MTU discovery with MTU option
-- Stateless Address Auto Configuration (SLAAC) with Prefix Information option
-- TBD: DNS auto configuration with RDNSS option
+- Prefix discovery with Prefix Information option
+- TBD: DNS configuration discovery with RDNSS/DNSSL option
+- TBD: Route advertisement with Route Information option
 
 ## Installation
 
