@@ -68,6 +68,11 @@ type InterfaceConfig struct {
 	// this router.
 	RetransmitTimeMilliseconds int `yaml:"retransmitTimeMilliseconds" json:"retransmitTimeMilliseconds" validate:"gte=0,lte=4294967295"`
 
+	// The maximum transmission unit (MTU) that should be used for outgoing
+	// This value specifies the largest packet size, in bytes,
+	// If set to zero or not specified, MTU opton will not be advertised
+	MTU int `yaml:"mtu" json:"mtu" validate:"gte=0,lte=4294967295"`
+
 	// Prefix-specific configuration parameters. The prefix fields must be
 	// non-overlapping with each other. The slice itself and elements must
 	// not be nil.

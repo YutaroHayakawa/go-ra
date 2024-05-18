@@ -282,6 +282,36 @@ func TestConfigValidation(t *testing.T) {
 			errorTag:    "lte",
 		},
 		{
+			name: "MTU > 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						MTU:                    -1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "MTU",
+			errorTag:    "gte",
+		},
+		{
+			name: "MTU > 4294967295",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						MTU:                    4294967296,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "MTU",
+			errorTag:    "lte",
+		},
+		{
 			name: "Nil PrefixConfig",
 			config: &Config{
 				Interfaces: []*InterfaceConfig{

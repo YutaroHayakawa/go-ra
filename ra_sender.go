@@ -51,6 +51,22 @@ func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *sl
 	}
 }
 
+func (s *raSender) setOptions(config *InterfaceConfig) []ndp.Option {
+	options := []ndp.Option{
+		&ndp.LinkLayerAddress{
+			Direction: ndp.Source,
+			Addr:      s.sock.hardwareAddr(),
+		},
+	}
+
+	if config.MTU > 0 {
+		options = append(options, &ndp.MTU{
+			MTU: uint32(config.MTU),
+		})
+	}
+	return options
+}
+
 func (s *raSender) reportRunning() {
 	s.statusLock.Lock()
 	defer s.statusLock.Unlock()
@@ -157,12 +173,7 @@ reload:
 			RouterLifetime:       time.Duration(config.RouterLifetimeSeconds) * time.Second,
 			ReachableTime:        time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
 			RetransmitTimer:      time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
-			Options: []ndp.Option{
-				&ndp.LinkLayerAddress{
-					Direction: ndp.Source,
-					Addr:      s.sock.hardwareAddr(),
-				},
-			},
+			Options:              s.setOptions(config),
 		}
 
 		for _, prefix := range config.Prefixes {
