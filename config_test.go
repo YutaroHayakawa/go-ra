@@ -91,15 +91,6 @@ func TestConfigValidation(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Nil InterfaceConig",
-			config: &Config{
-				Interfaces: nil,
-			},
-			expectError: true,
-			errorField:  "Interfaces",
-			errorTag:    "required",
-		},
-		{
 			name: "Empty InterfaceConig",
 			config: &Config{
 				Interfaces: []*InterfaceConfig{},
@@ -112,8 +103,8 @@ func TestConfigValidation(t *testing.T) {
 				Interfaces: []*InterfaceConfig{nil},
 			},
 			expectError: true,
-			errorField:  "Interfaces",
-			errorTag:    "non_nil_and_unique_name",
+			errorField:  "Name",
+			errorTag:    "required",
 		},
 		{
 			name: "Duplicated Interface Name",
@@ -131,7 +122,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			expectError: true,
 			errorField:  "Interfaces",
-			errorTag:    "non_nil_and_unique_name",
+			errorTag:    "unique",
 		},
 		{
 			name: "RAIntervalMilliseconds < 70",
@@ -351,8 +342,8 @@ func TestConfigValidation(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorField:  "Prefixes",
-			errorTag:    "non_nil_and_non_overlapping_prefix",
+			errorField:  "Prefix",
+			errorTag:    "required",
 		},
 		{
 			name: "No Prefix",
@@ -393,7 +384,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			expectError: true,
 			errorField:  "Prefixes",
-			errorTag:    "non_nil_and_non_overlapping_prefix",
+			errorTag:    "non_overlapping_prefix",
 		},
 		{
 			name: "ValidLifetimeSeconds = 4294967295",
@@ -661,8 +652,8 @@ func TestConfigValidation(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorField:  "Routes",
-			errorTag:    "non_nil_and_unique_prefix",
+			errorField:  "Prefix",
+			errorTag:    "required",
 		},
 		{
 			name: "No Prefix",
@@ -722,7 +713,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			expectError: true,
 			errorField:  "Routes",
-			errorTag:    "non_nil_and_unique_prefix",
+			errorTag:    "unique",
 		},
 	}
 

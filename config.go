@@ -20,7 +20,7 @@ type Config struct {
 	// Interface-specific configuration parameters. The Name field must be
 	// unique within the slice. The slice itself and elements must not be
 	// nil.
-	Interfaces []*InterfaceConfig `yaml:"interfaces" json:"interfaces" validate:"required,non_nil_and_unique_name,dive,required"`
+	Interfaces []*InterfaceConfig `yaml:"interfaces" json:"interfaces" validate:"unique=Name,dive,required" default:"[]"`
 }
 
 // InterfaceConfig represents the interface-specific configuration parameters
@@ -83,11 +83,11 @@ type InterfaceConfig struct {
 	// Prefix-specific configuration parameters. The prefix fields must be
 	// non-overlapping with each other. The slice itself and elements must
 	// not be nil.
-	Prefixes []*PrefixConfig `yaml:"prefixes" json:"prefixes" validate:"non_nil_and_non_overlapping_prefix,dive,required"`
+	Prefixes []*PrefixConfig `yaml:"prefixes" json:"prefixes" validate:"non_overlapping_prefix,dive,required" default:"[]"`
 
 	// Route-specific configuration parameters. The prefix fields must not
 	// be the same each other. The slice itself and elements must not be nil.
-	Routes []*RouteConfig `yaml:"routes" json:"routes" validate:"non_nil_and_unique_prefix,dive,required"`
+	Routes []*RouteConfig `yaml:"routes" json:"routes" validate:"unique=Prefix,dive,required" default:"[]"`
 }
 
 // PrefixConfig represents the prefix-specific configuration parameters
@@ -141,51 +141,13 @@ func (c *Config) defaultAndValidate() error {
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
-	// Adhoc custom validator which validates the slice elements are not
-	// nil AND the Name field is unique. As far as I know, there is no way
-	// to validate the uniqueness of struct fields in the nil-able slice of
-	// struct pointerrs with validator's built-in constraints.
-	validate.RegisterValidation("non_nil_and_unique_name", func(fl validator.FieldLevel) bool {
-		names := make(map[string]struct{})
-
-		ifaceSlice := fl.Field()
-		for i := 0; i < fl.Field().Len(); i++ {
-			ifacep := ifaceSlice.Index(i)
-			if ifacep.IsNil() {
-				return false
-			}
-
-			if ifacep.IsNil() {
-				return false
-			}
-
-			iface := ifacep.Elem()
-
-			name := iface.FieldByName("Name")
-			if _, ok := names[name.String()]; ok {
-				return false
-			} else {
-				names[name.String()] = struct{}{}
-			}
-		}
-
-		return true
-	})
-
-	// Adhoc custom validator which validates the slice elements are not
-	// nil AND the Prefix field is non-overlapping with each other.
-	validate.RegisterValidation("non_nil_and_non_overlapping_prefix", func(fl validator.FieldLevel) bool {
+	// Adhoc custom validator which validates the Prefix fields are non-overlapping with each other.
+	validate.RegisterValidation("non_overlapping_prefix", func(fl validator.FieldLevel) bool {
 		prefixes := []netip.Prefix{}
 
 		prefixSlice := fl.Field()
 		for i := 0; i < prefixSlice.Len(); i++ {
-			prefixElemp := prefixSlice.Index(i)
-			if prefixElemp.IsNil() {
-				return false
-			}
-
-			prefixElem := prefixElemp.Elem()
-			prefix := prefixElem.FieldByName("Prefix")
+			prefix := prefixSlice.Index(i).Elem().FieldByName("Prefix")
 
 			p, err := netip.ParsePrefix(prefix.String())
 			if err != nil {
@@ -216,37 +178,6 @@ func (c *Config) defaultAndValidate() error {
 		if routerLifetimeSeconds == 0 && pref != "medium" {
 			return false
 		}
-		return true
-	})
-
-	// Adhoc custom validator which validates the slice elements are not
-	// nil AND the Prefix field is unique within the slice.
-	validate.RegisterValidation("non_nil_and_unique_prefix", func(fl validator.FieldLevel) bool {
-		prefixes := map[netip.Prefix]struct{}{}
-
-		prefixSlice := fl.Field()
-		for i := 0; i < prefixSlice.Len(); i++ {
-			prefixElemp := prefixSlice.Index(i)
-			if prefixElemp.IsNil() {
-				return false
-			}
-
-			prefixElem := prefixElemp.Elem()
-			prefix := prefixElem.FieldByName("Prefix")
-
-			p, err := netip.ParsePrefix(prefix.String())
-			if err != nil {
-				// Just ignore this error here. cidrv6 constraint will catch it later.
-				continue
-			}
-
-			if _, found := prefixes[p]; found {
-				return false
-			}
-
-			prefixes[p] = struct{}{}
-		}
-
 		return true
 	})
 
