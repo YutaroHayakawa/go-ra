@@ -68,6 +68,19 @@ func newFixture(t testing.TB, param fixtureParam) *fixture {
 	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra", "2")
 	require.NoError(t, err)
 
+	// For route info
+	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".accept_ra_defrtr", "1")
+	require.NoError(t, err)
+
+	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra_defrtr", "1")
+	require.NoError(t, err)
+
+	err = sysctlClient.Set("net.ipv6.conf."+veth0Name+".accept_ra_rt_info_max_plen", "64")
+	require.NoError(t, err)
+
+	err = sysctlClient.Set("net.ipv6.conf."+veth1Name+".accept_ra_rt_info_max_plen", "64")
+	require.NoError(t, err)
+
 	t.Log("Set sysctl. Setting up links.")
 
 	err = netlink.LinkSetUp(link0)

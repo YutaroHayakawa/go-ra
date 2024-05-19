@@ -311,6 +311,8 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "MTU",
 			errorTag:    "lte",
 		},
+
+		// PrefixConfig
 		{
 			name: "Nil PrefixConfig",
 			config: &Config{
@@ -618,6 +620,109 @@ func TestConfigValidation(t *testing.T) {
 					},
 				},
 			},
+		},
+
+		// RouteConfig
+		{
+			name: "Nil RouteConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes:                 nil,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Empty RouteConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes:                 []*RouteConfig{},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil RouteConfig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes:                 []*RouteConfig{nil},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Routes",
+			errorTag:    "non_nil_and_unique_prefix",
+		},
+		{
+			name: "No Prefix",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes: []*RouteConfig{
+							{},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefix",
+			errorTag:    "required",
+		},
+		{
+			name: "No LifetimeSeconds",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes: []*RouteConfig{
+							{
+								Prefix: "2001:db8::/64",
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "LifetimeSeconds",
+			errorTag:    "required",
+		},
+		{
+			name: "Duplicated Prefix",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Routes: []*RouteConfig{
+							{
+								Prefix:          "2001:db8::/64",
+								LifetimeSeconds: 100,
+							},
+							{
+								Prefix:          "2001:db8::/64",
+								LifetimeSeconds: 100,
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Routes",
+			errorTag:    "non_nil_and_unique_prefix",
 		},
 	}
 

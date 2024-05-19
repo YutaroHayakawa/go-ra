@@ -28,10 +28,12 @@ type InterfaceConfig struct {
 	// Required: Network interface name. Must be unique within the configuration.
 	Name string `yaml:"name" json:"name" validate:"required"`
 
-	// Interval between sending unsolicited RA. Must be >= 70 and <= 1800000. Default is 600000.
-	// The upper bound is chosen to be compliant with RFC4861. The lower bound is intentionally
-	// chosen to be lower than RFC4861 for faster convergence. If you don't wish to overwhelm the
-	// network, and wish to be compliant with RFC4861, set to higher than 3000 as RFC4861 suggests.
+	// Required: Interval between sending unsolicited RA. Must be >= 70 and
+	// <= 1800000. Default is 600000. The upper bound is chosen to be
+	// compliant with RFC4861. The lower bound is intentionally chosen to
+	// be lower than RFC4861 for faster convergence. If you don't wish to
+	// overwhelm the network, and wish to be compliant with RFC4861, set to
+	// higher than 3000 as RFC4861 suggests.
 	RAIntervalMilliseconds int `yaml:"raIntervalMilliseconds" json:"raIntervalMilliseconds" validate:"required,gte=70,lte=1800000" default:"600000"`
 
 	// RA header fields
@@ -82,6 +84,10 @@ type InterfaceConfig struct {
 	// non-overlapping with each other. The slice itself and elements must
 	// not be nil.
 	Prefixes []*PrefixConfig `yaml:"prefixes" json:"prefixes" validate:"non_nil_and_non_overlapping_prefix,dive,required"`
+
+	// Route-specific configuration parameters. The prefix fields must not
+	// be the same each other. The slice itself and elements must not be nil.
+	Routes []*RouteConfig `yaml:"routes" json:"routes" validate:"non_nil_and_unique_prefix,dive,required"`
 }
 
 // PrefixConfig represents the prefix-specific configuration parameters
@@ -107,6 +113,22 @@ type PrefixConfig struct {
 	// 4294967295 and must be <= ValidLifetimeSeconds. Default is 604800 (7
 	// days). If set to 4294967295, it indicates infinity.
 	PreferredLifetimeSeconds *int `yaml:"preferredLifetimeSeconds" json:"preferredLifetimeSeconds" validate:"required,gte=0,ltefield=ValidLifetimeSeconds" default:"604800"`
+}
+
+// RouteConfig represents the route-specific configuration parameters
+type RouteConfig struct {
+	// Required: Prefix. Must be a valid IPv6 prefix.
+	Prefix string `yaml:"prefix" json:"prefix" validate:"required,cidrv6"`
+
+	// Required: The valid lifetime of the route in seconds. Must be >= 0
+	// and <= 4294967295. If set to 4294967295, it indicates infinity.
+	LifetimeSeconds int `yaml:"lifetimeSeconds" json:"lifetimeSeconds" validate:"required,gte=0,lte=4294967295"`
+
+	// Set Prf (Route Preference) field. It indicates whether to prefer the
+	// router associated with this prefix over others, when multiple
+	// identical prefixes (for different routers) have been received. Must
+	// be one of "low", "medium", or "high". Default is "medium".
+	Preference string `yaml:"preference" json:"preference" validate:"oneof=low medium high" default:"medium"`
 }
 
 // ValidationErrors is a type alias for the validator.ValidationErrors
@@ -194,6 +216,37 @@ func (c *Config) defaultAndValidate() error {
 		if routerLifetimeSeconds == 0 && pref != "medium" {
 			return false
 		}
+		return true
+	})
+
+	// Adhoc custom validator which validates the slice elements are not
+	// nil AND the Prefix field is unique within the slice.
+	validate.RegisterValidation("non_nil_and_unique_prefix", func(fl validator.FieldLevel) bool {
+		prefixes := map[netip.Prefix]struct{}{}
+
+		prefixSlice := fl.Field()
+		for i := 0; i < prefixSlice.Len(); i++ {
+			prefixElemp := prefixSlice.Index(i)
+			if prefixElemp.IsNil() {
+				return false
+			}
+
+			prefixElem := prefixElemp.Elem()
+			prefix := prefixElem.FieldByName("Prefix")
+
+			p, err := netip.ParsePrefix(prefix.String())
+			if err != nil {
+				// Just ignore this error here. cidrv6 constraint will catch it later.
+				continue
+			}
+
+			if _, found := prefixes[p]; found {
+				return false
+			}
+
+			prefixes[p] = struct{}{}
+		}
+
 		return true
 	})
 

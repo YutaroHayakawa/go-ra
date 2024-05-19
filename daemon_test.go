@@ -61,6 +61,18 @@ func TestDaemonHappyPath(t *testing.T) {
 				ReachableTimeMilliseconds:  10000,
 				RetransmitTimeMilliseconds: 10000,
 				MTU:                        1500,
+				Routes: []*RouteConfig{
+					{
+						Prefix:          "2001:db8::/64",
+						Preference:      "low",
+						LifetimeSeconds: 100,
+					},
+					{
+						Prefix:          "2001:db8:1::/64",
+						Preference:      "high",
+						LifetimeSeconds: 200,
+					},
+				},
 			},
 			{
 				Name:                   "net1",
@@ -126,6 +138,26 @@ func TestDaemonHappyPath(t *testing.T) {
 		}
 		require.NotNil(t, mtuOption, "MTU option is not advertised")
 		require.Equal(t, uint32(1500), mtuOption.MTU, "Invalid MTU")
+
+		// Find and check Route Information options
+		routeOptions := map[netip.Addr]*ndp.RouteInformation{}
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.RouteInformation); ok {
+				routeOptions[opt.Prefix] = opt
+			}
+		}
+		prefix0 := netip.MustParseAddr("2001:db8::")
+		prefix1 := netip.MustParseAddr("2001:db8:1::")
+		require.Contains(t, routeOptions, prefix0)
+		require.Contains(t, routeOptions, prefix1)
+		route0 := routeOptions[prefix0]
+		route1 := routeOptions[prefix1]
+		require.Equal(t, uint8(64), route0.PrefixLength)
+		require.Equal(t, uint8(64), route1.PrefixLength)
+		require.Equal(t, ndp.Low, route0.Preference)
+		require.Equal(t, ndp.High, route1.Preference)
+		require.Equal(t, time.Second*100, route0.RouteLifetime)
+		require.Equal(t, time.Second*200, route1.RouteLifetime)
 	})
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {

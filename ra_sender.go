@@ -51,6 +51,47 @@ func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *sl
 	}
 }
 
+func (s *raSender) getRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
+	msg := &ndp.RouterAdvertisement{
+		CurrentHopLimit:           uint8(config.CurrentHopLimit),
+		ManagedConfiguration:      config.Managed,
+		OtherConfiguration:        config.Other,
+		RouterSelectionPreference: s.getPreference(config.Preference),
+		RouterLifetime:            time.Duration(config.RouterLifetimeSeconds) * time.Second,
+		ReachableTime:             time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
+		RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
+		Options:                   s.getOptions(config),
+	}
+
+	for _, prefix := range config.Prefixes {
+		// At this point, we should have validated the
+		// configuration. If we haven't, it's a bug.
+		p := netip.MustParsePrefix(prefix.Prefix)
+		msg.Options = append(msg.Options, &ndp.PrefixInformation{
+			PrefixLength:                   uint8(p.Bits()),
+			OnLink:                         prefix.OnLink,
+			AutonomousAddressConfiguration: prefix.Autonomous,
+			ValidLifetime:                  time.Second * time.Duration(*prefix.ValidLifetimeSeconds),
+			PreferredLifetime:              time.Second * time.Duration(*prefix.PreferredLifetimeSeconds),
+			Prefix:                         p.Addr(),
+		})
+	}
+
+	for _, route := range config.Routes {
+		// At this point, we should have validated the
+		// configuration. If we haven't, it's a bug.
+		p := netip.MustParsePrefix(route.Prefix)
+		msg.Options = append(msg.Options, &ndp.RouteInformation{
+			PrefixLength:  uint8(p.Bits()),
+			Preference:    s.getPreference(route.Preference),
+			RouteLifetime: time.Second * time.Duration(route.LifetimeSeconds),
+			Prefix:        p.Addr(),
+		})
+	}
+
+	return msg
+}
+
 func (s *raSender) getOptions(config *InterfaceConfig) []ndp.Option {
 	options := []ndp.Option{
 		&ndp.LinkLayerAddress{
@@ -180,30 +221,8 @@ func (s *raSender) run(ctx context.Context) {
 
 reload:
 	for {
-		msg := &ndp.RouterAdvertisement{
-			CurrentHopLimit:           uint8(config.CurrentHopLimit),
-			ManagedConfiguration:      config.Managed,
-			OtherConfiguration:        config.Other,
-			RouterSelectionPreference: s.getPreference(config.Preference),
-			RouterLifetime:            time.Duration(config.RouterLifetimeSeconds) * time.Second,
-			ReachableTime:             time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
-			RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
-			Options:                   s.getOptions(config),
-		}
-
-		for _, prefix := range config.Prefixes {
-			// At this point, we should have validated the
-			// configuration. If we haven't, it's a bug.
-			p := netip.MustParsePrefix(prefix.Prefix)
-			msg.Options = append(msg.Options, &ndp.PrefixInformation{
-				PrefixLength:                   uint8(p.Bits()),
-				OnLink:                         prefix.OnLink,
-				AutonomousAddressConfiguration: prefix.Autonomous,
-				ValidLifetime:                  time.Second * time.Duration(*prefix.ValidLifetimeSeconds),
-				PreferredLifetime:              time.Second * time.Duration(*prefix.PreferredLifetimeSeconds),
-				Prefix:                         p.Addr(),
-			})
-		}
+		// RA message
+		msg := s.getRAMsg(config)
 
 		// For unsolicited RA
 		ticker := time.NewTicker(time.Duration(config.RAIntervalMilliseconds) * time.Millisecond)

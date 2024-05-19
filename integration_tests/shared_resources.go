@@ -14,4 +14,7 @@ var (
 
 	// Assigned to the TestPrefixInfo
 	vethPair2 = []string{"go-ra4", "go-ra5"}
+
+	// Assigned to the TestRouteInfo
+	vethPair3 = []string{"go-ra6", "go-ra7"}
 )
