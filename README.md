@@ -19,7 +19,7 @@ declarative configuration interface on top of it.
 - MTU discovery with MTU option
 - Prefix discovery with Prefix Information option
 - TBD: DNS configuration discovery with RDNSS/DNSSL option
-- TBD: Route advertisement with Route Information option
+- Route advertisement with Route Information option
 
 ## Installation
 
