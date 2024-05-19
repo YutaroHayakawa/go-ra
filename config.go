@@ -50,6 +50,11 @@ type InterfaceConfig struct {
 	// configuration information is available via DHCPv6. Default is false.
 	Other bool `yaml:"other" json:"other"`
 
+	// Set Prf (Default Router Preference) field. Must be one of "low",
+	// "medium", or "high". If RouterLifetimeSeconds is 0, it must be set
+	// to "medium". Default is "medium".
+	Preference string `yaml:"preference" json:"preference" validate:"eq_if medium RouterLifetimeSeconds 0,oneof=low medium high" default:"medium"`
+
 	// The lifetime associated with the default router in seconds. Must be
 	// >= 0 and <= 65535. Default is 0. The upper bound is chosen to be
 	// compliant to the RFC8319. If set to zero, the router is not
@@ -145,6 +150,8 @@ func (c *Config) defaultAndValidate() error {
 		return true
 	})
 
+	// Adhoc custom validator which validates the slice elements are not
+	// nil AND the Prefix field is non-overlapping with each other.
 	validate.RegisterValidation("non_nil_and_non_overlapping_prefix", func(fl validator.FieldLevel) bool {
 		prefixes := []netip.Prefix{}
 
@@ -176,6 +183,17 @@ func (c *Config) defaultAndValidate() error {
 			}
 		}
 
+		return true
+	})
+
+	// Adhoc custom validator which validates the value of this field must
+	// be medium if RouterLifetimeSeconds is 0.
+	validate.RegisterValidation("eq_if medium RouterLifetimeSeconds 0", func(fl validator.FieldLevel) bool {
+		pref := fl.Field().String()
+		routerLifetimeSeconds := fl.Parent().FieldByName("RouterLifetimeSeconds").Int()
+		if routerLifetimeSeconds == 0 && pref != "medium" {
+			return false
+		}
 		return true
 	})
 

@@ -51,7 +51,7 @@ func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *sl
 	}
 }
 
-func (s *raSender) setOptions(config *InterfaceConfig) []ndp.Option {
+func (s *raSender) getOptions(config *InterfaceConfig) []ndp.Option {
 	options := []ndp.Option{
 		&ndp.LinkLayerAddress{
 			Direction: ndp.Source,
@@ -65,6 +65,20 @@ func (s *raSender) setOptions(config *InterfaceConfig) []ndp.Option {
 		})
 	}
 	return options
+}
+
+func (s *raSender) getPreference(preference string) ndp.Preference {
+	switch preference {
+	case "low":
+		return ndp.Low
+	case "medium":
+		return ndp.Medium
+	case "high":
+		return ndp.High
+	default:
+		s.logger.Warn("Unknown router preference. Using medium.", "preference", preference)
+		return ndp.Medium
+	}
 }
 
 func (s *raSender) reportRunning() {
@@ -167,13 +181,14 @@ func (s *raSender) run(ctx context.Context) {
 reload:
 	for {
 		msg := &ndp.RouterAdvertisement{
-			CurrentHopLimit:      uint8(config.CurrentHopLimit),
-			ManagedConfiguration: config.Managed,
-			OtherConfiguration:   config.Other,
-			RouterLifetime:       time.Duration(config.RouterLifetimeSeconds) * time.Second,
-			ReachableTime:        time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
-			RetransmitTimer:      time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
-			Options:              s.setOptions(config),
+			CurrentHopLimit:           uint8(config.CurrentHopLimit),
+			ManagedConfiguration:      config.Managed,
+			OtherConfiguration:        config.Other,
+			RouterSelectionPreference: s.getPreference(config.Preference),
+			RouterLifetime:            time.Duration(config.RouterLifetimeSeconds) * time.Second,
+			ReachableTime:             time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
+			RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
+			Options:                   s.getOptions(config),
 		}
 
 		for _, prefix := range config.Prefixes {

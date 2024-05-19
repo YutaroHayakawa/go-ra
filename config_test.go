@@ -536,6 +536,89 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "PreferredLifetimeSeconds",
 			errorTag:    "ltefield",
 		},
+		{
+			name: "Preference low && RouterLifetimeSeconds != 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Preference:             "low",
+						RouterLifetimeSeconds:  1,
+					},
+				},
+			},
+		},
+		{
+			name: "Preference medium && RouterLifetimeSeconds != 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Preference:             "medium",
+						RouterLifetimeSeconds:  1,
+					},
+				},
+			},
+		},
+		{
+			name: "Preference high && RouterLifetimeSeconds != 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Preference:             "high",
+						RouterLifetimeSeconds:  1,
+					},
+				},
+			},
+		},
+		{
+			name: "Preference foo && RouterLifetimeSeconds != 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Preference:             "foo",
+						RouterLifetimeSeconds:  1,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Preference",
+			errorTag:    "oneof",
+		},
+		{
+			name: "Preference == low && RouterLifetimeSeconds == 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						Preference:             "low",
+						RouterLifetimeSeconds:  0,
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Preference",
+			errorTag:    "eq_if medium RouterLifetimeSeconds 0",
+		},
+		{
+			name: "Preference == <empty> && RouterLifetimeSeconds == 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RouterLifetimeSeconds:  0,
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

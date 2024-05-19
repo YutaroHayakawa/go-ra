@@ -56,6 +56,7 @@ func TestDaemonHappyPath(t *testing.T) {
 				CurrentHopLimit:            10,
 				Managed:                    true,
 				Other:                      true,
+				Preference:                 "high",
 				RouterLifetimeSeconds:      10,
 				ReachableTimeMilliseconds:  10000,
 				RetransmitTimeMilliseconds: 10000,
@@ -110,6 +111,7 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.Equal(t, uint8(10), ra.msg.CurrentHopLimit)
 		require.True(t, ra.msg.ManagedConfiguration)
 		require.True(t, ra.msg.OtherConfiguration)
+		require.Equal(t, ndp.High, ra.msg.RouterSelectionPreference)
 		require.Equal(t, time.Second*10, ra.msg.RouterLifetime)
 		require.Equal(t, time.Millisecond*10000, ra.msg.ReachableTime)
 		require.Equal(t, time.Millisecond*10000, ra.msg.RetransmitTimer)
