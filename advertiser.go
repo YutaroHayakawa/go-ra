@@ -52,7 +52,7 @@ func newAdvertiser(initialConfig *InterfaceConfig, ctor socketCtor, logger *slog
 }
 
 func (s *advertiser) createRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
-	msg := &ndp.RouterAdvertisement{
+	return &ndp.RouterAdvertisement{
 		CurrentHopLimit:           uint8(config.CurrentHopLimit),
 		ManagedConfiguration:      config.Managed,
 		OtherConfiguration:        config.Other,
@@ -62,34 +62,6 @@ func (s *advertiser) createRAMsg(config *InterfaceConfig) *ndp.RouterAdvertiseme
 		RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
 		Options:                   s.createOptions(config),
 	}
-
-	for _, prefix := range config.Prefixes {
-		// At this point, we should have validated the
-		// configuration. If we haven't, it's a bug.
-		p := netip.MustParsePrefix(prefix.Prefix)
-		msg.Options = append(msg.Options, &ndp.PrefixInformation{
-			PrefixLength:                   uint8(p.Bits()),
-			OnLink:                         prefix.OnLink,
-			AutonomousAddressConfiguration: prefix.Autonomous,
-			ValidLifetime:                  time.Second * time.Duration(*prefix.ValidLifetimeSeconds),
-			PreferredLifetime:              time.Second * time.Duration(*prefix.PreferredLifetimeSeconds),
-			Prefix:                         p.Addr(),
-		})
-	}
-
-	for _, route := range config.Routes {
-		// At this point, we should have validated the
-		// configuration. If we haven't, it's a bug.
-		p := netip.MustParsePrefix(route.Prefix)
-		msg.Options = append(msg.Options, &ndp.RouteInformation{
-			PrefixLength:  uint8(p.Bits()),
-			Preference:    s.toNDPPreference(route.Preference),
-			RouteLifetime: time.Second * time.Duration(route.LifetimeSeconds),
-			Prefix:        p.Addr(),
-		})
-	}
-
-	return msg
 }
 
 func (s *advertiser) createOptions(config *InterfaceConfig) []ndp.Option {
@@ -105,6 +77,53 @@ func (s *advertiser) createOptions(config *InterfaceConfig) []ndp.Option {
 			MTU: uint32(config.MTU),
 		})
 	}
+
+	for _, prefix := range config.Prefixes {
+		// At this point, we should have validated the
+		// configuration. If we haven't, it's a bug.
+		p := netip.MustParsePrefix(prefix.Prefix)
+		options = append(options, &ndp.PrefixInformation{
+			PrefixLength:                   uint8(p.Bits()),
+			OnLink:                         prefix.OnLink,
+			AutonomousAddressConfiguration: prefix.Autonomous,
+			ValidLifetime:                  time.Second * time.Duration(*prefix.ValidLifetimeSeconds),
+			PreferredLifetime:              time.Second * time.Duration(*prefix.PreferredLifetimeSeconds),
+			Prefix:                         p.Addr(),
+		})
+	}
+
+	for _, route := range config.Routes {
+		// At this point, we should have validated the
+		// configuration. If we haven't, it's a bug.
+		p := netip.MustParsePrefix(route.Prefix)
+		options = append(options, &ndp.RouteInformation{
+			PrefixLength:  uint8(p.Bits()),
+			Preference:    s.toNDPPreference(route.Preference),
+			RouteLifetime: time.Second * time.Duration(route.LifetimeSeconds),
+			Prefix:        p.Addr(),
+		})
+	}
+
+	for _, rdnss := range config.RDNSSes {
+		addresses := []netip.Addr{}
+		for _, addr := range rdnss.Addresses {
+			// At this point, we should have validated the
+			// configuration. If we haven't, it's a bug.
+			addresses = append(addresses, netip.MustParseAddr(addr))
+		}
+		options = append(options, &ndp.RecursiveDNSServer{
+			Lifetime: time.Second * time.Duration(rdnss.LifetimeSeconds),
+			Servers:  addresses,
+		})
+	}
+
+	for _, dnssl := range config.DNSSLs {
+		options = append(options, &ndp.DNSSearchList{
+			Lifetime:    time.Second * time.Duration(dnssl.LifetimeSeconds),
+			DomainNames: dnssl.DomainNames,
+		})
+	}
+
 	return options
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/mdlayher/ndp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 )
 
 // We use a common parameter for most of the Eventually.
@@ -80,6 +81,18 @@ func TestDaemonHappyPath(t *testing.T) {
 						Prefix:          "2001:db8:1::/64",
 						Preference:      "high",
 						LifetimeSeconds: 200,
+					},
+				},
+				RDNSSes: []*RDNSSConfig{
+					{
+						LifetimeSeconds: 300,
+						Addresses:       []string{"2001:db8::1", "2001:db8::2"},
+					},
+				},
+				DNSSLs: []*DNSSLConfig{
+					{
+						LifetimeSeconds: 400,
+						DomainNames:     []string{"example.com", "foo.example.com"},
 					},
 				},
 			},
@@ -187,6 +200,30 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.Equal(t, ndp.High, route1.Preference)
 		require.Equal(t, time.Second*100, route0.RouteLifetime)
 		require.Equal(t, time.Second*200, route1.RouteLifetime)
+
+		// Find and check RDNSS options
+		var rdnssOptions *ndp.RecursiveDNSServer
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.RecursiveDNSServer); ok {
+				rdnssOptions = opt
+				break
+			}
+		}
+		require.NotNil(t, rdnssOptions, "RDNSS option is not advertised")
+		require.Equal(t, time.Second*300, rdnssOptions.Lifetime)
+		require.ElementsMatch(t, []netip.Addr{netip.MustParseAddr("2001:db8::1"), netip.MustParseAddr("2001:db8::2")}, rdnssOptions.Servers)
+
+		// Find and check DNSSL options
+		var dnsslOptions *ndp.DNSSearchList
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.DNSSearchList); ok {
+				dnsslOptions = opt
+				break
+			}
+		}
+		require.NotNil(t, dnsslOptions, "DNSSL option is not advertised")
+		require.Equal(t, time.Second*400, dnsslOptions.Lifetime)
+		require.ElementsMatch(t, []string{"example.com", "foo.example.com"}, dnsslOptions.DomainNames)
 	})
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {

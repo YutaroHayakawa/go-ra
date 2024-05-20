@@ -715,6 +715,330 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "Routes",
 			errorTag:    "unique",
 		},
+
+		// RDNSSConfig
+		{
+			name: "Valid RDNSSConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes: []*RDNSSConfig{
+							{
+								LifetimeSeconds: 100,
+								Addresses: []string{
+									"fd00::1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple RDNSSConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes: []*RDNSSConfig{
+							{
+								LifetimeSeconds: 100,
+								Addresses: []string{
+									"fd00::1",
+								},
+							},
+							{
+								LifetimeSeconds: 100,
+								Addresses: []string{
+									"fd00::2",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Nil RDNSSConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes:                nil,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Empty RDNSSConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes:                []*RDNSSConfig{},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil RDNSSConfig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes:                []*RDNSSConfig{nil},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "LifetimeSeconds",
+			errorTag:    "required",
+		},
+		{
+			name: "No Addresses",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes: []*RDNSSConfig{
+							{
+								LifetimeSeconds: 100,
+								Addresses:       []string{},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Addresses",
+			errorTag:    "min",
+		},
+		{
+			name: "Duplicated Addresses",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes: []*RDNSSConfig{
+							{
+								LifetimeSeconds: 100,
+								Addresses: []string{
+									"fd00::1",
+									"fd00::1",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Addresses",
+			errorTag:    "unique",
+		},
+		{
+			name: "Invalid Address",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						RDNSSes: []*RDNSSConfig{
+							{
+								LifetimeSeconds: 100,
+								Addresses: []string{
+									"10.0.0.1",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Addresses[0]",
+			errorTag:    "ipv6",
+		},
+
+		// DNSSLConfig
+		{
+			name: "Valid DNSSLConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames: []string{
+									"example.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Multiple DNSSLConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames: []string{
+									"example.com",
+									"foo.example.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil DNSSLConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs:                 nil,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Empty DNSSLConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs:                 []*DNSSLConfig{},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil DNSSLConfig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs:                 []*DNSSLConfig{nil},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "LifetimeSeconds",
+			errorTag:    "required",
+		},
+		{
+			name: "No DomainNames",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames:     []string{},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "DomainNames",
+			errorTag:    "min",
+		},
+		{
+			name: "Duplicated DomainNames",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames: []string{
+									"example.com",
+									"example.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "DomainNames",
+			errorTag:    "unique",
+		},
+		{
+			name: "Qualified DomainName",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames: []string{
+									// Shouldn't be qualified.
+									"example.com.",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "DomainNames[0]",
+			errorTag:    "domain",
+		},
+		{
+			name: "IP address DomainName",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						DNSSLs: []*DNSSLConfig{
+							{
+								LifetimeSeconds: 100,
+								DomainNames: []string{
+									"10.0.0.0",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "DomainNames[0]",
+			errorTag:    "domain",
+		},
 	}
 
 	for _, tt := range tests {

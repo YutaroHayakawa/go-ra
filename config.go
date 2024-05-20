@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/netip"
 	"os"
+	"regexp"
 
 	"github.com/creasty/defaults"
 	"github.com/go-playground/validator/v10"
@@ -88,6 +89,12 @@ type InterfaceConfig struct {
 	// Route-specific configuration parameters. The prefix fields must not
 	// be the same each other. The slice itself and elements must not be nil.
 	Routes []*RouteConfig `yaml:"routes" json:"routes" validate:"unique=Prefix,dive,required" default:"[]"`
+
+	// RDNSS-specific configuration parameters.
+	RDNSSes []*RDNSSConfig `yaml:"rdnsses" json:"rdnsses" validate:"dive,required" default:"[]"`
+
+	// DNSSL-specific configuration parameters.
+	DNSSLs []*DNSSLConfig `yaml:"dnssls" json:"dnssls" validate:"dive,required" default:"[]"`
 }
 
 // PrefixConfig represents the prefix-specific configuration parameters
@@ -131,8 +138,31 @@ type RouteConfig struct {
 	Preference string `yaml:"preference" json:"preference" validate:"oneof=low medium high" default:"medium"`
 }
 
+// RDNSSConfig represents the RDNSS-specific configuration parameters
+type RDNSSConfig struct {
+	// Required: The maximum time in seconds over which these RDNSS
+	// addresses may be used for name resolution.
+	LifetimeSeconds int `yaml:"lifetimeSeconds" json:"lifetimeSeconds" validate:"required,gte=0,lte=4294967295"`
+
+	// Required: The addresses of the RDNSS servers. You must specify at least one address.
+	Addresses []string `yaml:"addresses" json:"addresses" validate:"required,unique,min=1,dive,ipv6"`
+}
+
+// DNSSLConfig represents the DNSSL-specific configuration parameters
+type DNSSLConfig struct {
+	// Required: The maximum time in seconds over which these DNSSL domain
+	// names may be used for name resolution.
+	LifetimeSeconds int `yaml:"lifetimeSeconds" json:"lifetimeSeconds" validate:"required,gte=0,lte=4294967295"`
+
+	// Required: The domain names to be used for DNS search list. You must specify at least one domain name.
+	DomainNames []string `yaml:"domainNames" json:"domainNames" validate:"required,unique,min=1,dive,domain"`
+}
+
 // ValidationErrors is a type alias for the validator.ValidationErrors
 type ValidationErrors = validator.ValidationErrors
+
+// Regular expression to validate the domain name in DNSSL configuration
+var domainRegexp = regexp.MustCompile(`^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$`)
 
 func (c *Config) defaultAndValidate() error {
 	if err := defaults.Set(c); err != nil {
@@ -179,6 +209,12 @@ func (c *Config) defaultAndValidate() error {
 			return false
 		}
 		return true
+	})
+
+	// Adhoc custom validator which validates the string is a valid domain name.
+	validate.RegisterValidation("domain", func(fl validator.FieldLevel) bool {
+		dom := fl.Field().String()
+		return domainRegexp.Match([]byte(dom))
 	})
 
 	if err := validate.Struct(c); err != nil {
