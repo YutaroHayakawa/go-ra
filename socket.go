@@ -14,15 +14,15 @@ import (
 	"golang.org/x/net/ipv6"
 )
 
-// rAdvSocket is a raw socket for sending RA and receiving RS
-type rAdvSocket interface {
+// socket is a raw socket for sending RA and receiving RS
+type socket interface {
 	hardwareAddr() net.HardwareAddr
 	sendRA(ctx context.Context, dst netip.Addr, msg *ndp.RouterAdvertisement) error
 	recvRS(ctx context.Context) (*ndp.RouterSolicitation, netip.Addr, error)
 	close()
 }
 
-type rAdvSocketCtor func(string) (rAdvSocket, error)
+type socketCtor func(string) (socket, error)
 
 // A real socket
 type sock struct {
@@ -30,9 +30,9 @@ type sock struct {
 	iface *net.Interface
 }
 
-var _ rAdvSocket = &sock{}
+var _ socket = &sock{}
 
-func newRAdvSocket(ifaceName string) (rAdvSocket, error) {
+func newSocket(ifaceName string) (socket, error) {
 	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
 		return nil, err

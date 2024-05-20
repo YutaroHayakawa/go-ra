@@ -26,7 +26,7 @@ func newFakeSockRegistry() *fakeSockRegistry {
 	}
 }
 
-func (r *fakeSockRegistry) newSock(iface string) (rAdvSocket, error) {
+func (r *fakeSockRegistry) newSock(iface string) (socket, error) {
 	r.regLock.Lock()
 	defer r.regLock.Unlock()
 
@@ -75,7 +75,7 @@ type fakeRS struct {
 	from netip.Addr
 }
 
-var _ rAdvSocket = &fakeSock{}
+var _ socket = &fakeSock{}
 
 func (s *fakeSock) txMulticastCh() <-chan fakeRA {
 	return s.txMulticast

@@ -16,10 +16,10 @@ type Daemon struct {
 	initialConfig     *Config
 	reloadCh          chan *Config
 	logger            *slog.Logger
-	socketConstructor rAdvSocketCtor
+	socketConstructor socketCtor
 
-	raSenders     map[string]*raSender
-	raSendersLock sync.RWMutex
+	advertisers     map[string]*advertiser
+	advertisersLock sync.RWMutex
 }
 
 // NewDaemon creates a new Daemon instance with the provided configuration and
@@ -38,8 +38,8 @@ func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 		initialConfig:     c,
 		reloadCh:          make(chan *Config),
 		logger:            slog.Default(),
-		socketConstructor: newRAdvSocket,
-		raSenders:         map[string]*raSender{},
+		socketConstructor: newSocket,
+		advertisers:       map[string]*advertiser{},
 	}
 
 	for _, opt := range opts {
@@ -61,58 +61,58 @@ reload:
 	for {
 		var (
 			toAdd    []*InterfaceConfig
-			toUpdate []*raSender
-			toRemove []*raSender
+			toUpdate []*advertiser
+			toRemove []*advertiser
 		)
 
-		// We may modify the raSenders map from now
-		d.raSendersLock.Lock()
+		// We may modify the advertiser map from now
+		d.advertisersLock.Lock()
 
 		// Cache the interface => config mapping for later use
 		ifaceConfigs := map[string]*InterfaceConfig{}
 
-		// Find out which raSender to add, update and remove
+		// Find out which advertiser to add, update and remove
 		for _, c := range config.Interfaces {
-			if raSender, ok := d.raSenders[c.Name]; !ok {
+			if advertiser, ok := d.advertisers[c.Name]; !ok {
 				toAdd = append(toAdd, c)
 			} else {
-				toUpdate = append(toUpdate, raSender)
+				toUpdate = append(toUpdate, advertiser)
 			}
 			ifaceConfigs[c.Name] = c
 		}
-		for name, raSender := range d.raSenders {
+		for name, advertiser := range d.advertisers {
 			if _, ok := ifaceConfigs[name]; !ok {
-				toRemove = append(toRemove, raSender)
+				toRemove = append(toRemove, advertiser)
 			}
 		}
 
 		// Add new per-interface jobs
 		for _, c := range toAdd {
 			d.logger.Info("Adding new RA sender", slog.String("interface", c.Name))
-			sender := newRASender(c, d.socketConstructor, d.logger)
+			sender := newAdvertiser(c, d.socketConstructor, d.logger)
 			go sender.run(ctx)
-			d.raSenders[c.Name] = sender
+			d.advertisers[c.Name] = sender
 		}
 
 		// Update (reload) existing workers
-		for _, raSender := range toUpdate {
-			iface := raSender.initialConfig.Name
+		for _, advertiser := range toUpdate {
+			iface := advertiser.initialConfig.Name
 			d.logger.Info("Updating RA sender", slog.String("interface", iface))
 			// Set timeout to guarantee progress
 			timeout, cancelTimeout := context.WithTimeout(ctx, time.Second*3)
-			raSender.reload(timeout, ifaceConfigs[iface])
+			advertiser.reload(timeout, ifaceConfigs[iface])
 			cancelTimeout()
 		}
 
 		// Remove unnecessary workers
-		for _, raSender := range toRemove {
-			iface := raSender.initialConfig.Name
+		for _, advertiser := range toRemove {
+			iface := advertiser.initialConfig.Name
 			d.logger.Info("Deleting RA sender", slog.String("interface", iface))
-			raSender.stop()
-			delete(d.raSenders, iface)
+			advertiser.stop()
+			delete(d.advertisers, iface)
 		}
 
-		d.raSendersLock.Unlock()
+		d.advertisersLock.Unlock()
 
 		// Wait for the events
 		for {
@@ -155,14 +155,14 @@ func (d *Daemon) Reload(ctx context.Context, newConfig *Config) error {
 
 // Status returns the current status of the daemon
 func (d *Daemon) Status() *Status {
-	d.raSendersLock.RLock()
+	d.advertisersLock.RLock()
 
 	ifaceStatus := []*InterfaceStatus{}
-	for _, raSender := range d.raSenders {
-		ifaceStatus = append(ifaceStatus, raSender.getStatus())
+	for _, advertiser := range d.advertisers {
+		ifaceStatus = append(ifaceStatus, advertiser.status())
 	}
 
-	d.raSendersLock.RUnlock()
+	d.advertisersLock.RUnlock()
 
 	sort.Slice(ifaceStatus, func(i, j int) bool {
 		return ifaceStatus[i].Name < ifaceStatus[j].Name
@@ -183,7 +183,7 @@ func WithLogger(l *slog.Logger) DaemonOption {
 
 // withSocketConstructor overrides the default socket constructor with the
 // provided one. For testing purposes only.
-func withSocketConstructor(c rAdvSocketCtor) DaemonOption {
+func withSocketConstructor(c socketCtor) DaemonOption {
 	return func(d *Daemon) {
 		d.socketConstructor = c
 	}

@@ -18,20 +18,20 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type raSender struct {
+type advertiser struct {
 	logger *slog.Logger
 
 	initialConfig *InterfaceConfig
 
 	// We use mutex-based synchronization instead of channels because
-	// status must be reported even when the main loop is hanging.
-	status     *InterfaceStatus
-	statusLock sync.RWMutex
+	// ifaceStatus must be reported even when the main loop is hanging.
+	ifaceStatus     *InterfaceStatus
+	ifaceStatusLock sync.RWMutex
 
 	reloadCh   chan *InterfaceConfig
 	stopCh     chan any
-	sock       rAdvSocket
-	socketCtor rAdvSocketCtor
+	sock       socket
+	socketCtor socketCtor
 }
 
 // An internal structure to represent RS
@@ -40,27 +40,27 @@ type rsMsg struct {
 	from netip.Addr
 }
 
-func newRASender(initialConfig *InterfaceConfig, ctor rAdvSocketCtor, logger *slog.Logger) *raSender {
-	return &raSender{
+func newAdvertiser(initialConfig *InterfaceConfig, ctor socketCtor, logger *slog.Logger) *advertiser {
+	return &advertiser{
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
 		initialConfig: initialConfig,
-		status:        &InterfaceStatus{Name: initialConfig.Name, State: "Unknown"},
+		ifaceStatus:   &InterfaceStatus{Name: initialConfig.Name, State: "Unknown"},
 		reloadCh:      make(chan *InterfaceConfig),
 		stopCh:        make(chan any),
 		socketCtor:    ctor,
 	}
 }
 
-func (s *raSender) getRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
+func (s *advertiser) createRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
 	msg := &ndp.RouterAdvertisement{
 		CurrentHopLimit:           uint8(config.CurrentHopLimit),
 		ManagedConfiguration:      config.Managed,
 		OtherConfiguration:        config.Other,
-		RouterSelectionPreference: s.getPreference(config.Preference),
+		RouterSelectionPreference: s.toNDPPreference(config.Preference),
 		RouterLifetime:            time.Duration(config.RouterLifetimeSeconds) * time.Second,
 		ReachableTime:             time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
 		RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
-		Options:                   s.getOptions(config),
+		Options:                   s.createOptions(config),
 	}
 
 	for _, prefix := range config.Prefixes {
@@ -83,7 +83,7 @@ func (s *raSender) getRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
 		p := netip.MustParsePrefix(route.Prefix)
 		msg.Options = append(msg.Options, &ndp.RouteInformation{
 			PrefixLength:  uint8(p.Bits()),
-			Preference:    s.getPreference(route.Preference),
+			Preference:    s.toNDPPreference(route.Preference),
 			RouteLifetime: time.Second * time.Duration(route.LifetimeSeconds),
 			Prefix:        p.Addr(),
 		})
@@ -92,7 +92,7 @@ func (s *raSender) getRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
 	return msg
 }
 
-func (s *raSender) getOptions(config *InterfaceConfig) []ndp.Option {
+func (s *advertiser) createOptions(config *InterfaceConfig) []ndp.Option {
 	options := []ndp.Option{
 		&ndp.LinkLayerAddress{
 			Direction: ndp.Source,
@@ -108,7 +108,7 @@ func (s *raSender) getOptions(config *InterfaceConfig) []ndp.Option {
 	return options
 }
 
-func (s *raSender) getPreference(preference string) ndp.Preference {
+func (s *advertiser) toNDPPreference(preference string) ndp.Preference {
 	switch preference {
 	case "low":
 		return ndp.Low
@@ -122,59 +122,59 @@ func (s *raSender) getPreference(preference string) ndp.Preference {
 	}
 }
 
-func (s *raSender) reportRunning() {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.State = Running
-	s.status.Message = ""
+func (s *advertiser) reportRunning() {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
+	s.ifaceStatus.State = Running
+	s.ifaceStatus.Message = ""
 }
 
-func (s *raSender) reportReloading() {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.State = Reloading
-	s.status.Message = ""
+func (s *advertiser) reportReloading() {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
+	s.ifaceStatus.State = Reloading
+	s.ifaceStatus.Message = ""
 }
 
-func (s *raSender) reportFailing(err error) {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.State = Failing
+func (s *advertiser) reportFailing(err error) {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
+	s.ifaceStatus.State = Failing
 	if err == nil {
-		s.status.Message = ""
+		s.ifaceStatus.Message = ""
 	} else {
-		s.status.Message = err.Error()
+		s.ifaceStatus.Message = err.Error()
 	}
 }
 
-func (s *raSender) reportStopped(err error) {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.State = Stopped
+func (s *advertiser) reportStopped(err error) {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
+	s.ifaceStatus.State = Stopped
 	if err == nil {
-		s.status.Message = ""
+		s.ifaceStatus.Message = ""
 	} else {
-		s.status.Message = err.Error()
+		s.ifaceStatus.Message = err.Error()
 	}
 }
 
-func (s *raSender) incTxStat(solicited bool) {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
+func (s *advertiser) incTxStat(solicited bool) {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
 	if solicited {
-		s.status.TxSolicitedRA++
+		s.ifaceStatus.TxSolicitedRA++
 	} else {
-		s.status.TxUnsolicitedRA++
+		s.ifaceStatus.TxUnsolicitedRA++
 	}
 }
 
-func (s *raSender) setLastUpdate() {
-	s.statusLock.Lock()
-	defer s.statusLock.Unlock()
-	s.status.LastUpdate = time.Now().Unix()
+func (s *advertiser) setLastUpdate() {
+	s.ifaceStatusLock.Lock()
+	defer s.ifaceStatusLock.Unlock()
+	s.ifaceStatus.LastUpdate = time.Now().Unix()
 }
 
-func (s *raSender) run(ctx context.Context) {
+func (s *advertiser) run(ctx context.Context) {
 	// The current desired configuration
 	config := s.initialConfig
 
@@ -222,7 +222,7 @@ func (s *raSender) run(ctx context.Context) {
 reload:
 	for {
 		// RA message
-		msg := s.getRAMsg(config)
+		msg := s.createRAMsg(config)
 
 		// For unsolicited RA
 		ticker := time.NewTicker(time.Duration(config.RAIntervalMilliseconds) * time.Millisecond)
@@ -272,13 +272,13 @@ reload:
 	s.sock.close()
 }
 
-func (s *raSender) getStatus() *InterfaceStatus {
-	s.statusLock.RLock()
-	defer s.statusLock.RUnlock()
-	return s.status.deepCopy()
+func (s *advertiser) status() *InterfaceStatus {
+	s.ifaceStatusLock.RLock()
+	defer s.ifaceStatusLock.RUnlock()
+	return s.ifaceStatus.deepCopy()
 }
 
-func (s *raSender) reload(ctx context.Context, newConfig *InterfaceConfig) error {
+func (s *advertiser) reload(ctx context.Context, newConfig *InterfaceConfig) error {
 	select {
 	case s.reloadCh <- newConfig:
 	case <-ctx.Done():
@@ -287,6 +287,6 @@ func (s *raSender) reload(ctx context.Context, newConfig *InterfaceConfig) error
 	return nil
 }
 
-func (s *raSender) stop() {
+func (s *advertiser) stop() {
 	close(s.stopCh)
 }

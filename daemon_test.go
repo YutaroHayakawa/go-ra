@@ -103,7 +103,9 @@ func TestDaemonHappyPath(t *testing.T) {
 	})
 
 	t.Run("Ensure unsolicited RA is sent with the specified interval", func(t *testing.T) {
-		sock, err := reg.getSock("net0")
+		var sock *fakeSock
+
+		sock, err = reg.getSock("net0")
 		require.NoError(t, err)
 		require.True(t, assertRAInterval(t, sock, time.Millisecond*100))
 
@@ -113,7 +115,9 @@ func TestDaemonHappyPath(t *testing.T) {
 	})
 
 	t.Run("Ensure the RA parameter is reflected to the packet", func(t *testing.T) {
-		sock, err := reg.getSock("net0")
+		var sock *fakeSock
+
+		sock, err = reg.getSock("net0")
 		require.NoError(t, err)
 
 		// Sampling one RA
