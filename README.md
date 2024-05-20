@@ -18,13 +18,14 @@ declarative configuration interface on top of it.
 - Router MAC address discovery with Source Link Layer Address option
 - MTU discovery with MTU option
 - Prefix discovery with Prefix Information option
-- TBD: DNS configuration discovery with RDNSS/DNSSL option
+- DNS configuration discovery with RDNSS/DNSSL option
 - Route advertisement with Route Information option
 
 ## Installation
 
 - Library: Use Go Modules as usual
 - Stand-alone Binary: Visit [release page](https://github.com/YutaroHayakawa/go-ra/releases) and install pre-build binaries
+- Container Image: Visit [registry page](https://github.com/YutaroHayakawa/go-ra/pkgs/container/gorad) and pull images
 
 ## Basic Usage
 
