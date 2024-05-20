@@ -35,6 +35,29 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
 dockers:
-  - image_templates:
-      - "ghcr.io/yutarohayakawa/gorad:{{ .Tag }}"
-      - "ghcr.io/yutarohayakawa/gorad:latest"
+  - use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/yutarohayakawa/gorad:{{ .Tag }}-amd64"
+      - "ghcr.io/yutarohayakawa/gorad:latest-amd64"
+    build_flag_templates:
+      - --platform=linux/amd64
+  - use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/yutarohayakawa/gorad:{{ .Tag }}-arm64"
+      - "ghcr.io/yutarohayakawa/gorad:latest-arm64"
+    build_flag_templates:
+      - --platform=linux/arm64
+
+docker_manifests:
+  - name_template: yutarohayakawa/gorad:latest
+    image_templates:
+      - yutarohayakawa/gorad:latest-amd64
+      - yutarohayakawa/gorad:latest-arm64
+  - name_template: yutarohayakawa/gorad:{{ .Tag }}
+    image_templates:
+      - yutarohayakawa/gorad:{{ .Tag }}-amd64
+      - yutarohayakawa/gorad:{{ .Tag }}-arm64
