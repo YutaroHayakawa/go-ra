@@ -1,4 +1,4 @@
-FROM debian AS builder
+FROM --platform=$BUILDPLATFORM debian AS builder
 
 RUN echo "interfaces: []" > /config.yaml
 
