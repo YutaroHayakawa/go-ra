@@ -33,3 +33,8 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+dockers:
+  - image_templates:
+      - "ghcr.io/yutarohayakawa/gorad:{{ .Tag }}"
+      - "ghcr.io/yutarohayakawa/gorad:latest"
