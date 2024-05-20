@@ -61,6 +61,15 @@ func TestDaemonHappyPath(t *testing.T) {
 				ReachableTimeMilliseconds:  10000,
 				RetransmitTimeMilliseconds: 10000,
 				MTU:                        1500,
+				Prefixes: []*PrefixConfig{
+					{
+						Prefix:                   "fd00::/64",
+						OnLink:                   true,
+						Autonomous:               true,
+						PreferredLifetimeSeconds: ptr.To(100),
+						ValidLifetimeSeconds:     ptr.To(200),
+					},
+				},
 				Routes: []*RouteConfig{
 					{
 						Prefix:          "2001:db8::/64",
@@ -142,6 +151,22 @@ func TestDaemonHappyPath(t *testing.T) {
 		}
 		require.NotNil(t, mtuOption, "MTU option is not advertised")
 		require.Equal(t, uint32(1500), mtuOption.MTU, "Invalid MTU")
+
+		// Find and check Prefix Information options
+		prefixOptions := map[netip.Addr]*ndp.PrefixInformation{}
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.PrefixInformation); ok {
+				prefixOptions[opt.Prefix] = opt
+			}
+		}
+		prefix := netip.MustParseAddr("fd00::")
+		require.Contains(t, prefixOptions, prefix)
+		prefixInfo := prefixOptions[prefix]
+		require.Equal(t, uint8(64), prefixInfo.PrefixLength)
+		require.True(t, prefixInfo.OnLink)
+		require.True(t, prefixInfo.AutonomousAddressConfiguration)
+		require.Equal(t, time.Second*100, prefixInfo.PreferredLifetime)
+		require.Equal(t, time.Second*200, prefixInfo.ValidLifetime)
 
 		// Find and check Route Information options
 		routeOptions := map[netip.Addr]*ndp.RouteInformation{}
