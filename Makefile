@@ -6,7 +6,10 @@ lint:
 	docker run -t --rm -v $(PWD):/app -w /app golangci/golangci-lint:v1.58.0 golangci-lint run -v -D errcheck
 
 deepcopy:
-	go run tools/deepcopy-gen/deepcopy-gen.go Config Status InterfaceConfig InterfaceStatus PrefixConfig
+	go run tools/deepcopy-gen/deepcopy-gen.go \
+		Config Status InterfaceConfig \
+		InterfaceStatus PrefixConfig RouteConfig \
+		RDNSSConfig DNSSLConfig
 
 check-deepcopy:
 	$(MAKE) deepcopy
