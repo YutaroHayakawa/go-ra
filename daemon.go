@@ -17,6 +17,7 @@ type Daemon struct {
 	reloadCh          chan *Config
 	logger            *slog.Logger
 	socketConstructor socketCtor
+	deviceWatcher     deviceWatcher
 
 	advertisers     map[string]*advertiser
 	advertisersLock sync.RWMutex
@@ -39,6 +40,7 @@ func NewDaemon(config *Config, opts ...DaemonOption) (*Daemon, error) {
 		reloadCh:          make(chan *Config),
 		logger:            slog.Default(),
 		socketConstructor: newSocket,
+		deviceWatcher:     newDeviceWatcher(),
 		advertisers:       map[string]*advertiser{},
 	}
 
@@ -89,9 +91,9 @@ reload:
 		// Add new per-interface jobs
 		for _, c := range toAdd {
 			d.logger.Info("Adding new RA sender", slog.String("interface", c.Name))
-			sender := newAdvertiser(c, d.socketConstructor, d.logger)
-			go sender.run(ctx)
-			d.advertisers[c.Name] = sender
+			advertiser := newAdvertiser(c, d.socketConstructor, d.deviceWatcher, d.logger)
+			go advertiser.run(ctx)
+			d.advertisers[c.Name] = advertiser
 		}
 
 		// Update (reload) existing workers
@@ -186,5 +188,13 @@ func WithLogger(l *slog.Logger) DaemonOption {
 func withSocketConstructor(c socketCtor) DaemonOption {
 	return func(d *Daemon) {
 		d.socketConstructor = c
+	}
+}
+
+// withDeviceWatcher overrides the default device watcher with the provided
+// one. For testing purposes only.
+func withDeviceWatcher(w deviceWatcher) DaemonOption {
+	return func(d *Daemon) {
+		d.deviceWatcher = w
 	}
 }

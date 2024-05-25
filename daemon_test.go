@@ -5,7 +5,9 @@ package ra
 
 import (
 	"context"
+	"net"
 	"net/netip"
+	"slices"
 	"testing"
 	"time"
 
@@ -20,7 +22,7 @@ func eventully(t *testing.T, f func() bool) {
 	require.Eventually(t, f, time.Second*1, time.Millisecond*10)
 }
 
-func assertRAInterval(t *testing.T, sock *fakeSock, interval time.Duration) bool {
+func assertRAInterval(ct *assert.CollectT, sock *fakeSock, interval time.Duration) bool {
 	// wait until we get 3 RAs
 	timeout, cancel := context.WithTimeout(context.Background(), time.Second*1)
 
@@ -30,7 +32,7 @@ outer:
 		select {
 		case <-timeout.Done():
 			cancel()
-			return assert.Fail(t, "couldn't get 3 RAs in time")
+			return assert.Fail(ct, "couldn't get 3 RAs in time")
 		case ra := <-sock.txMulticastCh():
 			ras = append(ras, ra)
 			if len(ras) == 3 {
@@ -45,7 +47,7 @@ outer:
 	diff0 := ras[1].tstamp.Sub(ras[0].tstamp)
 	diff1 := ras[2].tstamp.Sub(ras[1].tstamp)
 
-	return assert.InDelta(t, interval, diff0, mergin) && assert.InDelta(t, interval, diff1, mergin)
+	return assert.InDelta(ct, interval, diff0, mergin) && assert.InDelta(ct, interval, diff1, mergin)
 }
 
 func TestDaemonHappyPath(t *testing.T) {
@@ -105,7 +107,16 @@ func TestDaemonHappyPath(t *testing.T) {
 
 	reg := newFakeSockRegistry()
 
-	d, err := NewDaemon(config, withSocketConstructor(reg.newSock))
+	// Create a fake device watcher and inject an initial device state
+	devWatcher := newFakeDeviceWatcher("net0", "net1")
+	devWatcher.update("net0", deviceState{isUp: true, addr: net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}})
+	devWatcher.update("net1", deviceState{isUp: true, addr: net.HardwareAddr{0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}})
+
+	d, err := NewDaemon(
+		config,
+		withSocketConstructor(reg.newSock),
+		withDeviceWatcher(devWatcher),
+	)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -129,11 +140,15 @@ func TestDaemonHappyPath(t *testing.T) {
 
 		sock, err = reg.getSock("net0")
 		require.NoError(t, err)
-		require.True(t, assertRAInterval(t, sock, time.Millisecond*100))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assertRAInterval(ct, sock, time.Millisecond*100)
+		}, time.Second*1, time.Millisecond*100)
 
 		sock, err = reg.getSock("net1")
 		require.NoError(t, err)
-		require.True(t, assertRAInterval(t, sock, time.Millisecond*100))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assertRAInterval(ct, sock, time.Millisecond*100)
+		}, time.Second*1, time.Millisecond*100)
 	})
 
 	t.Run("Ensure the RA parameter is reflected to the packet", func(t *testing.T) {
@@ -164,6 +179,17 @@ func TestDaemonHappyPath(t *testing.T) {
 		}
 		require.NotNil(t, mtuOption, "MTU option is not advertised")
 		require.Equal(t, uint32(1500), mtuOption.MTU, "Invalid MTU")
+
+		// Find and check Source Link-Layer Address option
+		var slaOption *ndp.LinkLayerAddress
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.LinkLayerAddress); ok {
+				slaOption = opt
+				break
+			}
+		}
+		require.NotNil(t, slaOption, "Source Link-Layer Address option is not advertised")
+		require.Equal(t, net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}, slaOption.Addr)
 
 		// Find and check Prefix Information options
 		prefixOptions := map[netip.Addr]*ndp.PrefixInformation{}
@@ -236,6 +262,32 @@ func TestDaemonHappyPath(t *testing.T) {
 		assert.Equal(t, Running, status.Interfaces[1].State)
 	})
 
+	t.Run("Ensure Source Link Layer Address option is updated after device MAC address change", func(t *testing.T) {
+		// Update the MAC address of net0
+		devWatcher.update("net0", deviceState{isUp: true, addr: net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x78}})
+
+		sock, err := reg.getSock("net0")
+		require.NoError(t, err)
+
+		eventully(t, func() bool {
+			// Sampling one RA
+			ra := <-sock.txMulticastCh()
+
+			// Find and check Source Link-Layer Address option
+			var slaOption *ndp.LinkLayerAddress
+			for _, option := range ra.msg.Options {
+				if opt, ok := option.(*ndp.LinkLayerAddress); ok {
+					slaOption = opt
+					break
+				}
+			}
+
+			require.NotNil(t, slaOption, "Source Link-Layer Address option is not advertised")
+
+			return slices.Equal(net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x78}, slaOption.Addr)
+		})
+	})
+
 	t.Run("Ensure unsolicited RA interval is updated after reload", func(t *testing.T) {
 		// Update the interval of net1. net0 should remain the same.
 		config.Interfaces[1].RAIntervalMilliseconds = 200
@@ -246,18 +298,18 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.NoError(t, err)
 		cancelTimeout()
 
-		eventully(t, func() bool {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			sock0, err := reg.getSock("net0")
 			if !assert.NoError(t, err) {
-				return false
+				return
 			}
 			sock1, err := reg.getSock("net1")
 			if !assert.NoError(t, err) {
-				return false
+				return
 			}
-			return assertRAInterval(t, sock0, time.Millisecond*100) &&
-				assertRAInterval(t, sock1, time.Millisecond*200)
-		})
+			assertRAInterval(ct, sock0, time.Millisecond*100)
+			assertRAInterval(ct, sock1, time.Millisecond*200)
+		}, time.Second*1, time.Millisecond*100)
 	})
 
 	t.Run("Ensure RS is replied with unicast RA", func(t *testing.T) {
@@ -292,17 +344,18 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.NoError(t, err)
 		cancelTimeout()
 
-		eventully(t, func() bool {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			sock0, err := reg.getSock("net0")
 			if !assert.NoError(t, err) {
-				return false
+				return
 			}
 			sock1, err := reg.getSock("net1")
 			if !assert.NoError(t, err) {
-				return false
+				return
 			}
-			return assertRAInterval(t, sock0, time.Millisecond*100) && assert.True(t, sock1.isClosed())
-		})
+			assertRAInterval(ct, sock0, time.Millisecond*100)
+			assert.True(ct, sock1.isClosed())
+		}, time.Second*1, time.Millisecond*100)
 	})
 
 	t.Run("Ensure unsolicited RA is stopped after stopping the daemon", func(t *testing.T) {

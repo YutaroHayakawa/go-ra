@@ -10,11 +10,11 @@ import (
 	"log/slog"
 	"net/netip"
 	"reflect"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/mdlayher/ndp"
-	"github.com/sethvargo/go-retry"
 	"golang.org/x/sys/unix"
 )
 
@@ -28,10 +28,10 @@ type advertiser struct {
 	ifaceStatus     *InterfaceStatus
 	ifaceStatusLock sync.RWMutex
 
-	reloadCh   chan *InterfaceConfig
-	stopCh     chan any
-	sock       socket
-	socketCtor socketCtor
+	reloadCh      chan *InterfaceConfig
+	stopCh        chan any
+	socketCtor    socketCtor
+	deviceWatcher deviceWatcher
 }
 
 // An internal structure to represent RS
@@ -40,7 +40,7 @@ type rsMsg struct {
 	from netip.Addr
 }
 
-func newAdvertiser(initialConfig *InterfaceConfig, ctor socketCtor, logger *slog.Logger) *advertiser {
+func newAdvertiser(initialConfig *InterfaceConfig, ctor socketCtor, devWatcher deviceWatcher, logger *slog.Logger) *advertiser {
 	return &advertiser{
 		logger:        logger.With(slog.String("interface", initialConfig.Name)),
 		initialConfig: initialConfig,
@@ -48,10 +48,11 @@ func newAdvertiser(initialConfig *InterfaceConfig, ctor socketCtor, logger *slog
 		reloadCh:      make(chan *InterfaceConfig),
 		stopCh:        make(chan any),
 		socketCtor:    ctor,
+		deviceWatcher: devWatcher,
 	}
 }
 
-func (s *advertiser) createRAMsg(config *InterfaceConfig) *ndp.RouterAdvertisement {
+func (s *advertiser) createRAMsg(config *InterfaceConfig, deviceState *deviceState) *ndp.RouterAdvertisement {
 	return &ndp.RouterAdvertisement{
 		CurrentHopLimit:           uint8(config.CurrentHopLimit),
 		ManagedConfiguration:      config.Managed,
@@ -60,15 +61,15 @@ func (s *advertiser) createRAMsg(config *InterfaceConfig) *ndp.RouterAdvertiseme
 		RouterLifetime:            time.Duration(config.RouterLifetimeSeconds) * time.Second,
 		ReachableTime:             time.Duration(config.ReachableTimeMilliseconds) * time.Millisecond,
 		RetransmitTimer:           time.Duration(config.RetransmitTimeMilliseconds) * time.Millisecond,
-		Options:                   s.createOptions(config),
+		Options:                   s.createOptions(config, deviceState),
 	}
 }
 
-func (s *advertiser) createOptions(config *InterfaceConfig) []ndp.Option {
+func (s *advertiser) createOptions(config *InterfaceConfig, deviceState *deviceState) []ndp.Option {
 	options := []ndp.Option{
 		&ndp.LinkLayerAddress{
 			Direction: ndp.Source,
-			Addr:      s.sock.hardwareAddr(),
+			Addr:      deviceState.addr,
 		},
 	}
 
@@ -197,38 +198,60 @@ func (s *advertiser) run(ctx context.Context) {
 	// The current desired configuration
 	config := s.initialConfig
 
+	// The current device state
+	devState := deviceState{}
+
 	// Set a timestamp for the first "update"
 	s.setLastUpdate()
 
-	// Create the socket
-	err := retry.Constant(ctx, time.Second, func(ctx context.Context) error {
-		var err error
-
-		s.sock, err = s.socketCtor(config.Name)
-		if err != nil {
-			// These are the unrecoverable errors we're aware of now.
-			if errors.Is(err, unix.EPERM) || errors.Is(err, unix.EINVAL) {
-				return fmt.Errorf("cannot create socket: %w", err)
-			}
-
-			s.reportFailing(err)
-
-			return retry.RetryableError(err)
-		}
-
-		return nil
-	})
+	// Watch the device state
+	devCh, err := s.deviceWatcher.watch(ctx, config.Name)
 	if err != nil {
 		s.reportStopped(err)
 		return
 	}
 
+waitDevice:
+	// Wait for the device to be present and up
+	for {
+		select {
+		case <-ctx.Done():
+			s.reportStopped(ctx.Err())
+			return
+		case dev := <-devCh:
+			// Update the device state
+			devState = dev
+
+			// If the device is up, we can proceed with the socket creation
+			if dev.isUp {
+				break waitDevice
+			}
+		}
+	}
+
+	// Create the socket
+	sock, err := s.socketCtor(config.Name)
+	if err != nil {
+		// These are the unrecoverable errors we're aware of now.
+		if errors.Is(err, unix.EPERM) || errors.Is(err, unix.EINVAL) {
+			s.reportStopped(fmt.Errorf("cannot create socket: %w", err))
+			return
+		}
+		// Otherwise, we'll retry
+		s.reportFailing(err)
+		goto waitDevice
+	}
+
 	// Launch the RS receiver
 	rsCh := make(chan *rsMsg)
+	receiverCtx, cancelReceiver := context.WithCancel(ctx)
 	go func() {
 		for {
-			rs, addr, err := s.sock.recvRS(ctx)
+			rs, addr, err := sock.recvRS(receiverCtx)
 			if err != nil {
+				if receiverCtx.Err() != nil {
+					return
+				}
 				s.reportFailing(err)
 				continue
 			}
@@ -241,7 +264,7 @@ func (s *advertiser) run(ctx context.Context) {
 reload:
 	for {
 		// RA message
-		msg := s.createRAMsg(config)
+		msg := s.createRAMsg(config, &devState)
 
 		// For unsolicited RA
 		ticker := time.NewTicker(time.Duration(config.RAIntervalMilliseconds) * time.Millisecond)
@@ -252,7 +275,7 @@ reload:
 				// Reply to RS
 				//
 				// TODO: Rate limit this to mitigate RS flooding attack
-				err := s.sock.sendRA(ctx, rs.from, msg)
+				err := sock.sendRA(ctx, rs.from, msg)
 				if err != nil {
 					s.reportFailing(err)
 					continue
@@ -261,7 +284,7 @@ reload:
 				s.reportRunning()
 			case <-ticker.C:
 				// Send unsolicited RA
-				err := s.sock.sendRA(ctx, netip.IPv6LinkLocalAllNodes(), msg)
+				err := sock.sendRA(ctx, netip.IPv6LinkLocalAllNodes(), msg)
 				if err != nil {
 					s.reportFailing(err)
 					continue
@@ -277,6 +300,28 @@ reload:
 				s.reportReloading()
 				s.setLastUpdate()
 				continue reload
+			case dev := <-devCh:
+				// Save the old address for comparison
+				oldAddr := devState.addr
+
+				// Update the device state
+				devState = dev
+
+				// Device is stopped. Stop the advertisement
+				// and wait for the device to be up again.
+				if !devState.isUp {
+					cancelReceiver()
+					s.reportFailing(fmt.Errorf("device is down"))
+					goto waitDevice
+				}
+
+				// Device address has changed. We need to
+				// change the Link Layer Address option in the
+				// RA message. Reload internally.
+				if !slices.Equal(oldAddr, dev.addr) {
+					s.reportReloading()
+					continue reload
+				}
 			case <-ctx.Done():
 				s.reportStopped(ctx.Err())
 				break reload
@@ -288,7 +333,8 @@ reload:
 
 	}
 
-	s.sock.close()
+	cancelReceiver()
+	sock.close()
 }
 
 func (s *advertiser) status() *InterfaceStatus {
