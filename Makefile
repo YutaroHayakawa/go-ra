@@ -16,5 +16,5 @@ check-deepcopy:
 	git diff --exit-code zz_generated_deepcopy.go || echo "deepcopy is not up to date. Please commit the changes."; git diff zz_generated_deepcopy.go
 
 coverage:
-	go test -cover -coverprofile=coverage.out -v
+	go test -v -exec "sudo" -coverpkg=./... -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html

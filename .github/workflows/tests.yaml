@@ -18,8 +18,11 @@ jobs:
       with:
         go-version-file: ./go.mod
 
-    - name: Run unit tests
-      run: go test -v
+    - name: Run tests
+      run: go test -v -exec "sudo" -coverpkg=./... -coverprofile=coverage.out ./...
 
-    - name: Run integration tests
-      run: go test -exec "sudo -E" -v ./integration_tests
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage.html
+        path: coverage.html
