@@ -212,7 +212,7 @@ func (s *advertiser) run(ctx context.Context) {
 	}
 
 waitDevice:
-	// Wait for the device to be present and up
+	// Wait for the device to be present and up and the addresses are assigned
 	for {
 		select {
 		case <-ctx.Done():
@@ -222,8 +222,9 @@ waitDevice:
 			// Update the device state
 			devState = dev
 
-			// If the device is up, we can proceed with the socket creation
-			if dev.isUp {
+			// If the device is up, mac and link-local address are
+			// assigned, we can proceed with the socket creation
+			if dev.isUp || len(dev.addr) > 0 || dev.v6LLAddrAssigned {
 				break waitDevice
 			}
 		}
@@ -330,7 +331,6 @@ reload:
 				break reload
 			}
 		}
-
 	}
 
 	cancelReceiver()

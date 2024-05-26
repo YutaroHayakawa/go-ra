@@ -8,8 +8,9 @@ import (
 )
 
 type deviceState struct {
-	isUp bool
-	addr net.HardwareAddr
+	isUp             bool
+	v6LLAddrAssigned bool
+	addr             net.HardwareAddr
 }
 
 type deviceWatcher interface {
@@ -26,6 +27,7 @@ func newDeviceWatcher() deviceWatcher {
 
 func (w *netlinkDeviceWatcher) watch(ctx context.Context, name string) (<-chan deviceState, error) {
 	linkCh := make(chan netlink.LinkUpdate)
+	addrCh := make(chan netlink.AddrUpdate)
 
 	if err := netlink.LinkSubscribeWithOptions(
 		linkCh,
@@ -38,11 +40,21 @@ func (w *netlinkDeviceWatcher) watch(ctx context.Context, name string) (<-chan d
 		return nil, err
 	}
 
+	if err := netlink.AddrSubscribeWithOptions(
+		addrCh,
+		ctx.Done(),
+		netlink.AddrSubscribeOptions{
+			ErrorCallback: func(err error) {},
+			ListExisting:  true,
+		},
+	); err != nil {
+		return nil, err
+	}
+
 	devCh := make(chan deviceState)
 
 	go func() {
-		defer close(linkCh)
-		defer close(devCh)
+		currentState := deviceState{}
 		for {
 			select {
 			case <-ctx.Done():
@@ -51,10 +63,26 @@ func (w *netlinkDeviceWatcher) watch(ctx context.Context, name string) (<-chan d
 				if link.Attrs().Name != name {
 					continue
 				}
-				devCh <- deviceState{
-					isUp: link.Flags&uint32(net.FlagUp) != 0,
-					addr: link.Attrs().HardwareAddr,
+				currentState.isUp = link.Flags&uint32(net.FlagUp) != 0
+				currentState.addr = link.Attrs().HardwareAddr
+				devCh <- currentState
+			case addr := <-addrCh:
+				iface, err := net.InterfaceByIndex(addr.LinkIndex)
+				if err != nil {
+					continue
 				}
+				if iface.Name != name {
+					continue
+				}
+				if !addr.LinkAddress.IP.IsLinkLocalUnicast() {
+					continue
+				}
+				if addr.NewAddr {
+					currentState.v6LLAddrAssigned = true
+				} else {
+					currentState.v6LLAddrAssigned = false
+				}
+				devCh <- currentState
 			}
 		}
 	}()
