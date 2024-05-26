@@ -28,3 +28,4 @@ jobs:
       with:
         name: coverage.html
         path: coverage.html
+        compression-level: 0
