@@ -14,9 +14,9 @@ require (
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
-	golang.org/x/net v0.25.0
-	golang.org/x/sys v0.20.0
-	golang.org/x/tools v0.21.0
+	golang.org/x/net v0.26.0
+	golang.org/x/sys v0.21.0
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 )
@@ -49,12 +49,12 @@ require (
 	github.com/spf13/viper v1.16.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
 	google.golang.org/grpc v1.56.3 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
