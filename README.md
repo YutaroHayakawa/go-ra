@@ -20,6 +20,7 @@ declarative configuration interface on top of it.
 - Prefix discovery with Prefix Information option
 - DNS configuration discovery with RDNSS/DNSSL option
 - Route advertisement with Route Information option
+- NAT64 prefix discovery with PREF64 option
 
 ## Installation
 

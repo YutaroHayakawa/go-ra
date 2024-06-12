@@ -1039,6 +1039,167 @@ func TestConfigValidation(t *testing.T) {
 			errorField:  "DomainNames[0]",
 			errorTag:    "domain",
 		},
+
+		// NAT64PrefixConfig
+		{
+			name: "Nil NAT64PrefixConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes:          nil,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Empty NAT64PrefixConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes:          []*NAT64PrefixConfig{},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Nil NAT64PrefixConfig Element",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes:          []*NAT64PrefixConfig{nil},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefix",
+			errorTag:    "required",
+		},
+		{
+			name: "No NAT64Prefix",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								LifetimeSeconds: ptr.To(1800),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefix",
+			errorTag:    "required",
+		},
+		{
+			name: "Multiple NAT64PrefixConfig",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								Prefix:          "fc64:ff9b::/96",
+								LifetimeSeconds: ptr.To(1800),
+							},
+							{
+								Prefix:          "fd64:ff9b::/96",
+								LifetimeSeconds: ptr.To(1800),
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid NAT64Prefix length",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								Prefix: "64:ff9b::/104",
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "Prefix",
+			errorTag:    "invalid_prefix_len",
+		},
+		{
+			name: "LifetimeSeconds = 65528",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								Prefix:          "64:ff9b::/96",
+								LifetimeSeconds: ptr.To(65528),
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "LifetimeSeconds < 0",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								Prefix:          "64:ff9b::/96",
+								LifetimeSeconds: ptr.To(-1),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "LifetimeSeconds",
+			errorTag:    "gte",
+		},
+		{
+			name: "LifetimeSeconds > 65528",
+			config: &Config{
+				Interfaces: []*InterfaceConfig{
+					{
+						Name:                   "net0",
+						RAIntervalMilliseconds: 1000,
+						NAT64Prefixes: []*NAT64PrefixConfig{
+							{
+								Prefix:          "64:ff9b::/96",
+								LifetimeSeconds: ptr.To(65529),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+			errorField:  "LifetimeSeconds",
+			errorTag:    "lte",
+		},
 	}
 
 	for _, tt := range tests {

@@ -97,6 +97,12 @@ func TestDaemonHappyPath(t *testing.T) {
 						DomainNames:     []string{"example.com", "foo.example.com"},
 					},
 				},
+				NAT64Prefixes: []*NAT64PrefixConfig{
+					{
+						Prefix:          "64:ff9b::/96",
+						LifetimeSeconds: ptr.To(1800),
+					},
+				},
 			},
 			{
 				Name:                   "net1",
@@ -250,6 +256,19 @@ func TestDaemonHappyPath(t *testing.T) {
 		require.NotNil(t, dnsslOptions, "DNSSL option is not advertised")
 		require.Equal(t, time.Second*400, dnsslOptions.Lifetime)
 		require.ElementsMatch(t, []string{"example.com", "foo.example.com"}, dnsslOptions.DomainNames)
+
+		// Find and check NAT64Prefix options
+		nat64prefixOptions := map[netip.Prefix]*ndp.PREF64{}
+		for _, option := range ra.msg.Options {
+			if opt, ok := option.(*ndp.PREF64); ok {
+				nat64prefixOptions[opt.Prefix] = opt
+			}
+		}
+		nat64prefix := netip.MustParsePrefix("64:ff9b::/96")
+		require.Contains(t, nat64prefixOptions, nat64prefix)
+		nat64prefixInfo := nat64prefixOptions[nat64prefix]
+		require.Equal(t, int(96), nat64prefixInfo.Prefix.Bits())
+		require.Equal(t, time.Second*1800, nat64prefixInfo.Lifetime)
 	})
 
 	t.Run("Ensure the status is running and the result is ordered by name", func(t *testing.T) {
