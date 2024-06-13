@@ -125,6 +125,13 @@ func (s *advertiser) createOptions(config *InterfaceConfig, deviceState *deviceS
 		})
 	}
 
+	for _, nat64prefix := range config.NAT64Prefixes {
+		options = append(options, &ndp.PREF64{
+			Lifetime: time.Second * time.Duration(*nat64prefix.LifetimeSeconds),
+			Prefix:   netip.MustParsePrefix(nat64prefix.Prefix),
+		})
+	}
+
 	return options
 }
 

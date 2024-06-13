@@ -95,6 +95,9 @@ type InterfaceConfig struct {
 
 	// DNSSL-specific configuration parameters.
 	DNSSLs []*DNSSLConfig `yaml:"dnssls" json:"dnssls" validate:"dive,required" default:"[]"`
+
+	// NAT64 prefix-specific configuration parameters.
+	NAT64Prefixes []*NAT64PrefixConfig `yaml:"nat64prefixes" json:"nat64prefixes" validate:"dive,required" default:"[]"`
 }
 
 // PrefixConfig represents the prefix-specific configuration parameters
@@ -158,6 +161,19 @@ type DNSSLConfig struct {
 	DomainNames []string `yaml:"domainNames" json:"domainNames" validate:"required,unique,min=1,dive,domain"`
 }
 
+// NAT64PrefixConfig represents the NAT64 prefix-specific configuration parameters
+type NAT64PrefixConfig struct {
+	// Required: NAT64 prefix. Must be a valid IPv6 prefix.
+	// Can only be one of /32, /40, /48, /56, /64, or /96.
+	Prefix string `yaml:"prefix" json:"prefix" validate:"required,cidrv6,invalid_prefix_len"`
+
+	// Required: The valid lifetime of the NAT64 prefix in seconds. Must be >= 0
+	// and <= 65528. If set to 0, it indicates that the prefix should not be used anymore.
+	// Should not be shorter than Router Lifetime. This lifetime is encoded
+	// in units of 8-seconds increments as ScaledLifetime.
+	LifetimeSeconds *int `yaml:"lifetimeSeconds" json:"lifetimeSeconds" validate:"required,gte=0,lte=65528" default:"65528"`
+}
+
 // ValidationErrors is a type alias for the validator.ValidationErrors
 type ValidationErrors = validator.ValidationErrors
 
@@ -215,6 +231,21 @@ func (c *Config) defaultAndValidate() error {
 	validate.RegisterValidation("domain", func(fl validator.FieldLevel) bool {
 		dom := fl.Field().String()
 		return domainRegexp.Match([]byte(dom))
+	})
+
+	// Adhoc custom validator which validates the prefix length must
+	// be one of /32, /40, /48, /56, /64, or /96.
+	validate.RegisterValidation("invalid_prefix_len", func(fl validator.FieldLevel) bool {
+		p := netip.MustParsePrefix(fl.Field().String())
+		validPrefixLengths := map[int]bool{
+			32: true,
+			40: true,
+			48: true,
+			56: true,
+			64: true,
+			96: true,
+		}
+		return validPrefixLengths[p.Bits()]
 	})
 
 	if err := validate.Struct(c); err != nil {
