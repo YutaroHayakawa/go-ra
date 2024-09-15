@@ -12,7 +12,7 @@ require (
 	github.com/mdlayher/ndp v1.1.0
 	github.com/osrg/gobgp/v3 v3.29.0
 	github.com/stretchr/testify v1.9.0
-	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/net v0.29.0
 	golang.org/x/sys v0.25.0
 	golang.org/x/tools v0.25.0
