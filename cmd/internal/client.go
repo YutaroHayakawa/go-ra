@@ -6,6 +6,7 @@ package internal
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -50,7 +51,7 @@ func (c *Client) Reload(config *ra.Config) error {
 
 	// 5XX errors. No error body.
 	if res.StatusCode == http.StatusInternalServerError {
-		return fmt.Errorf(res.Status)
+		return errors.New(res.Status)
 	}
 
 	// Failed to reload
@@ -79,7 +80,7 @@ func (c *Client) Status() (*ra.Status, error) {
 	}
 
 	if res.StatusCode == http.StatusInternalServerError {
-		return nil, fmt.Errorf(res.Status)
+		return nil, errors.New(res.Status)
 	}
 
 	var e Error
