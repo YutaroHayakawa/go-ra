@@ -1,6 +1,6 @@
 module github.com/YutaroHayakawa/go-ra
 
-go 1.22.0
+go 1.22.7
 
 toolchain go1.23.1
 
@@ -10,7 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
-	github.com/osrg/gobgp/v3 v3.29.0
+	github.com/osrg/gobgp/v3 v3.30.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/net v0.29.0
