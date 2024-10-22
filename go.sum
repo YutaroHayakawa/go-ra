@@ -73,6 +73,8 @@ github.com/gabriel-vasile/mimetype v1.4.3 h1:in2uUcidCuFcDKtdcBxlR0rJ1+fsokWf+uq
 github.com/gabriel-vasile/mimetype v1.4.3/go.mod h1:d8uq/6HKRL6CGdk+aubisF/M5GcPfT7nKyLpA0lbSSk=
 github.com/globusdigital/deep-copy v0.5.5-0.20240510190924-e112476c0181 h1:xod3IB0Vj/XE3cHHi1RGX6Sfhk6Y6kvg4sckyKz1EyU=
 github.com/globusdigital/deep-copy v0.5.5-0.20240510190924-e112476c0181/go.mod h1:oPGx4SbH3jNfa8v0nEIRYNL27Cr2tgoTqG+YB0otQvA=
+github.com/globusdigital/deep-copy v0.5.5-0.20241022152029-dc4a8d91ed65 h1:EZEN/oBYRqkkxZLYtMrTuUWeSrmGEfQ81TUN9E8IYEU=
+github.com/globusdigital/deep-copy v0.5.5-0.20241022152029-dc4a8d91ed65/go.mod h1:DpkzJdKnF/cE8w8u6RW/SDql6PVyFE3c0TLZOhG8ejs=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
