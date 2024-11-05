@@ -10,7 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
-	github.com/osrg/gobgp/v3 v3.30.0
+	github.com/osrg/gobgp/v3 v3.31.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/net v0.30.0
