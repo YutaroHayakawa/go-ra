@@ -7,7 +7,7 @@ toolchain go1.23.3
 require (
 	github.com/creasty/defaults v1.7.0
 	github.com/globusdigital/deep-copy v0.5.5-0.20241022152029-dc4a8d91ed65
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
 	github.com/osrg/gobgp/v3 v3.31.0
