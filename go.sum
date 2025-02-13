@@ -154,6 +154,8 @@ github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm4
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.3.1 h1:KjJaJ9iWZ3jOFZIf1Lqf4laDRCasjl0BCmnEGxkdLb4=
 github.com/google/uuid v1.3.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+vpHVxEJEs9eg=
 github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
 github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8/go.mod h1:dvDLG8qkwmyD9a/MJJN3XJcT3xFxOKAvTZGvuZmac9g=
@@ -199,6 +201,8 @@ github.com/osrg/gobgp/v3 v3.32.0 h1:B2krh/44etYQAuLq+iMkORxIvXj+cGIpuR6qDGNGagM=
 github.com/osrg/gobgp/v3 v3.32.0/go.mod h1:8m+kgkdaWrByxg5EWpNUO2r/mopodrNBOUBhMnW/yGQ=
 github.com/osrg/gobgp/v3 v3.33.0 h1:G8NlY1gzz0DOfiwfiYv2++vWpPLm+CMAKYRVzSmaJow=
 github.com/osrg/gobgp/v3 v3.33.0/go.mod h1:8m+kgkdaWrByxg5EWpNUO2r/mopodrNBOUBhMnW/yGQ=
+github.com/osrg/gobgp/v3 v3.34.0 h1:DDIWsAIE7j1dwhSV3tGsTKs9OO8MTOS4atErebZxTtA=
+github.com/osrg/gobgp/v3 v3.34.0/go.mod h1:l2nPaHaLmIoKbFxMUzKon/h6c9BTzCp5zJI9Dhnrx5c=
 github.com/pelletier/go-toml/v2 v2.0.8 h1:0ctb6s9mE31h0/lhu+J6OPmVeDxJn+kYnJc2jZR9tGQ=
 github.com/pelletier/go-toml/v2 v2.0.8/go.mod h1:vuYfssBdrU2XDZ9bYydBu6t+6a6PYNcZljzZR9VXg+4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
