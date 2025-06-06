@@ -2,7 +2,7 @@ module github.com/YutaroHayakawa/go-ra
 
 go 1.23.0
 
-toolchain go1.24.3
+toolchain go1.24.4
 
 require (
 	github.com/creasty/defaults v1.7.0
