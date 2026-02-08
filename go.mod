@@ -1,6 +1,6 @@
 module github.com/YutaroHayakawa/go-ra
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.5
 
@@ -14,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/net v0.43.0
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.41.0
 	golang.org/x/tools v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
