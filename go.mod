@@ -10,7 +10,7 @@ require (
 	github.com/mdlayher/ndp v1.1.0
 	github.com/osrg/gobgp/v3 v3.37.0
 	github.com/osrg/gobgp/v4 v4.3.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/net v0.47.0
 	golang.org/x/sys v0.39.0
