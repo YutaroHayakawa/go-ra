@@ -1,6 +1,6 @@
 module github.com/YutaroHayakawa/go-ra
 
-go 1.24.5
+go 1.25.0
 
 require (
 	github.com/creasty/defaults v1.7.0
@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/net v0.47.0
-	golang.org/x/sys v0.39.0
+	golang.org/x/sys v0.42.0
 	golang.org/x/tools v0.39.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
