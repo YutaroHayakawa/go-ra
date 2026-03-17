@@ -4,7 +4,7 @@ go 1.24.5
 
 require (
 	github.com/creasty/defaults v1.7.0
-	github.com/globusdigital/deep-copy v0.5.5-0.20241022152029-dc4a8d91ed65
+	github.com/globusdigital/deep-copy v0.5.5-0.20251122193020-7cda106f7b4b
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
