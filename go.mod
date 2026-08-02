@@ -5,16 +5,16 @@ go 1.25.0
 require (
 	github.com/creasty/defaults v1.7.0
 	github.com/globusdigital/deep-copy v0.5.5-0.20260518201129-d21b3f1c56fa
-	github.com/go-playground/validator/v10 v10.30.1
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
 	github.com/osrg/gobgp/v3 v3.37.0
 	github.com/osrg/gobgp/v4 v4.5.0
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/net v0.52.0
-	golang.org/x/sys v0.42.0
-	golang.org/x/tools v0.43.0
+	golang.org/x/net v0.54.0
+	golang.org/x/sys v0.45.0
+	golang.org/x/tools v0.44.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 )
@@ -26,7 +26,7 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -52,12 +52,12 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
