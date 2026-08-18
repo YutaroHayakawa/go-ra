@@ -42,7 +42,7 @@ func TestSolicitedRA(t *testing.T) {
 	// Wait until the RA sender is ready
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		status := rad0.Status()
-		if assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
+		if !assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
 			return
 		}
 		assert.Equal(ct, status.Interfaces[0].State, ra.Running)
@@ -61,7 +61,7 @@ func TestSolicitedRA(t *testing.T) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		_, err := oc.GetIPv6LinkLocalNeighborAddress(veth1Name)
 		status := rad0.Status()
-		if assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
+		if !assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
 			return
 		}
 		if !assert.NoError(ct, err, "Failed to get neighbor entry") {
