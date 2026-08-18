@@ -10,6 +10,7 @@ import (
 
 	"github.com/YutaroHayakawa/go-ra"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vishvananda/netlink"
 )
@@ -39,9 +40,12 @@ func TestSolicitedRA(t *testing.T) {
 	go rad0.Run(ctx)
 
 	// Wait until the RA sender is ready
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		status := rad0.Status()
-		return status.Interfaces[0].State == ra.Running
+		if assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
+			return
+		}
+		assert.Equal(ct, status.Interfaces[0].State, ra.Running)
 	}, time.Second*10, 100*time.Millisecond)
 
 	t.Logf("rad is ready. Down -> Up %s to send RS", veth1Name)
