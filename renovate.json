@@ -5,6 +5,10 @@
   ],
   "packageRules": [
     {
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "non-major dependency updates"
+    },
+    {
       "matchPackageNames": ["github.com/creasty/defaults"],
       "versioning": "semver:v1.7.0"
     }
