@@ -10,9 +10,9 @@ import (
 
 	"github.com/YutaroHayakawa/go-ra"
 
-	apipb "github.com/osrg/gobgp/v3/api"
-	"github.com/osrg/gobgp/v3/pkg/config/oc"
-	"github.com/osrg/gobgp/v3/pkg/server"
+	apipb "github.com/osrg/gobgp/v4/api"
+	"github.com/osrg/gobgp/v4/pkg/config/oc"
+	"github.com/osrg/gobgp/v4/pkg/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,8 +166,8 @@ func TestGoBGPUnnumbered(t *testing.T) {
 		}
 
 		return peer0 != nil && peer1 != nil &&
-			peer0.State.SessionState == apipb.PeerState_ESTABLISHED &&
-			peer1.State.SessionState == apipb.PeerState_ESTABLISHED
+			peer0.State.SessionState == apipb.PeerState_SESSION_STATE_ESTABLISHED &&
+			peer1.State.SessionState == apipb.PeerState_SESSION_STATE_ESTABLISHED
 	}, time.Second*10, time.Millisecond*500)
 
 	t.Log("Session established. All done.")
