@@ -58,10 +58,16 @@ func TestSolicitedRA(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure the neighbor entry is created
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		_, err := oc.GetIPv6LinkLocalNeighborAddress(veth1Name)
 		status := rad0.Status()
-		return err == nil && status.Interfaces[0].TxSolicitedRA > 0
+		if assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
+			return
+		}
+		if !assert.NoError(ct, err, "Failed to get neighbor entry") {
+			return
+		}
+		assert.Greater(ct, status.Interfaces[0].TxSolicitedRA, 0)
 	}, time.Second*10, 100*time.Millisecond)
 
 	t.Log("Neighbor entry created. Done.")
