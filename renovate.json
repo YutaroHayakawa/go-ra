@@ -6,7 +6,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["github.com/creasty/defaults"],
-      "versioning": "semver:v1.7.0"
+      "allowedVersions": "/^v?1\\.7\\.0$/"
     },
     {
       "matchUpdateTypes": ["patch", "minor"],
