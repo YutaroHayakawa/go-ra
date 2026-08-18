@@ -7,7 +7,6 @@ import (
 	"context"
 	"net"
 	"net/netip"
-	"slices"
 	"testing"
 	"time"
 
@@ -16,11 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 )
-
-// We use a common parameter for most of the Eventually.
-func eventully(t *testing.T, f func() bool) {
-	require.Eventually(t, f, time.Second*1, time.Millisecond*10)
-}
 
 func assertRAInterval(ct *assert.CollectT, sock *fakeSock, interval time.Duration) bool {
 	// wait until we get 3 RAs
@@ -134,11 +128,12 @@ func TestDaemonHappyPath(t *testing.T) {
 	})
 
 	t.Run("Ensure socket is created", func(t *testing.T) {
-		eventully(t, func() bool {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			_, err0 := reg.getSock("net0")
 			_, err1 := reg.getSock("net1")
-			return assert.NoError(t, err0) && assert.NoError(t, err1)
-		})
+			assert.NoError(ct, err0)
+			assert.NoError(ct, err1)
+		}, time.Second*1, time.Millisecond*100)
 	})
 
 	t.Run("Ensure unsolicited RA is sent with the specified interval", func(t *testing.T) {
@@ -288,7 +283,7 @@ func TestDaemonHappyPath(t *testing.T) {
 		sock, err := reg.getSock("net0")
 		require.NoError(t, err)
 
-		eventully(t, func() bool {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			// Sampling one RA
 			ra := <-sock.txMulticastCh()
 
@@ -301,10 +296,12 @@ func TestDaemonHappyPath(t *testing.T) {
 				}
 			}
 
-			require.NotNil(t, slaOption, "Source Link-Layer Address option is not advertised")
+			if !assert.NotNil(ct, slaOption, "Source Link-Layer Address option is not advertised") {
+				return
+			}
 
-			return slices.Equal(net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x78}, slaOption.Addr)
-		})
+			assert.Equal(ct, net.HardwareAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x78}, slaOption.Addr)
+		}, time.Second*1, time.Millisecond*100)
 	})
 
 	t.Run("Ensure unsolicited RA interval is updated after reload", func(t *testing.T) {
@@ -380,16 +377,19 @@ func TestDaemonHappyPath(t *testing.T) {
 	t.Run("Ensure unsolicited RA is stopped after stopping the daemon", func(t *testing.T) {
 		// Cancel the daemon's context
 		cancel()
-		eventully(t, func() bool {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			sock0, err := reg.getSock("net0")
-			if !assert.NoError(t, err) {
-				return false
+			if !assert.NoError(ct, err) {
+				return
 			}
 			sock1, err := reg.getSock("net1")
-			if !assert.NoError(t, err) {
-				return false
+			if !assert.NoError(ct, err) {
+				return
 			}
-			return assert.True(t, sock0.isClosed()) && assert.True(t, sock1.isClosed())
-		})
+			if !assert.True(ct, sock0.isClosed()) {
+				return
+			}
+			assert.True(ct, sock1.isClosed())
+		}, time.Second*1, time.Millisecond*100)
 	})
 }
