@@ -52,9 +52,10 @@ func TestRouteInfo(t *testing.T) {
 	// Wait for the daemon to start
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		status := daemon.Status()
-		for _, iface := range status.Interfaces {
-			assert.Equal(ct, ra.Running, iface.State)
+		if !assert.Len(ct, status.Interfaces, 1, "Missing interface info") {
+			return
 		}
+		assert.Equal(ct, ra.Running, status.Interfaces[0].State)
 	}, 3*time.Second, time.Millisecond*100)
 
 	// Check the routing table entries

@@ -13,6 +13,7 @@ import (
 	apipb "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/osrg/gobgp/v3/pkg/server"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,12 +53,17 @@ func TestGoBGPUnnumbered(t *testing.T) {
 	t.Log("Started rad. Waiting for RAs to be sent.")
 
 	// Wait at least for 2 RAs to be sent
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		status0 := rad0.Status()
+		if !assert.Len(ct, status0.Interfaces, 1, "Missing interface info") {
+			return
+		}
 		status1 := rad1.Status()
-		return status0 != nil && status1 != nil &&
-			status0.Interfaces[0].State == ra.Running &&
-			status1.Interfaces[0].State == ra.Running
+		if !assert.Len(ct, status1.Interfaces, 1, "Missing interface info") {
+			return
+		}
+		assert.Equal(ct, status0.Interfaces[0].State, ra.Running)
+		assert.Equal(ct, status1.Interfaces[0].State, ra.Running)
 	}, time.Second*10, time.Millisecond*500)
 
 	t.Log("RAs are being sent. Starting BGP.")
