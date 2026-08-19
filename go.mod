@@ -9,7 +9,7 @@ require (
 	github.com/lorenzosaino/go-sysctl v0.3.1
 	github.com/mdlayher/ndp v1.1.0
 	github.com/osrg/gobgp/v4 v4.8.0
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/net v0.58.0
 	golang.org/x/sys v0.47.0
@@ -46,6 +46,7 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
